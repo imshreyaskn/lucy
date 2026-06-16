@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lucy Permissions</title>
+  <style>
+    body {
+      background: #000000;
+      color: #ffffff;
+      font-family: 'Inter', system-ui, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    button {
+      padding: 12px 24px;
+      font-size: 1.2rem;
+      background: #ffffff;
+      color: #000000;
+      border: 1px solid #fbcfe8;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #fbcfe8;
+    }
+    #status {
+      margin-top: 16px;
+      font-size: 1.1rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>Microphone Access Required</h1>
+  <p>To use the Voice Agent, you need to grant microphone access.</p>
+  <button id="grant-btn">Grant Microphone Permission</button>
+  <p id="status"></p>
+
+  <script type="module" src="./options.ts"></script>
+</body>
+</html>

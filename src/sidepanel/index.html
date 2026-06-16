@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lucy</title>
+  <link rel="stylesheet" href="./sidepanel.css">
+  <link href="https://fonts.googleapis.com/css2?family=Parisienne&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Lucy</h1>
+      <div class="header-actions">
+        <button id="settings-btn" aria-label="Settings" title="Settings">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-settings"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+        <button id="debug-btn" aria-label="Toggle Debug" title="Toggle Debug Logs">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bug"><path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3.003 3.003 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5"/><path d="M6 13H2"/><path d="M3 21c0-2.1 1.7-3.9 3.8-4"/><path d="M20.97 5c-2-.2-3.53 1.5-3.53 3.5"/><path d="M22 13h-4"/><path d="M17.2 17c2.1.1 3.8 1.9 3.8 4"/></svg>
+        </button>
+        <button id="reset-btn" aria-label="Reset Chat" title="Reset Chat">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-rotate-cw"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <section id="chat-log" aria-live="polite">
+      <div id="welcome-card" class="message agent">
+        <div class="message-header">Lucy</div>
+        <div class="message-body">
+          Hi! I'm Lucy, your voice assistant. Press <strong>Alt+Shift+V</strong> or click the microphone below to start talking.
+        </div>
+      </div>
+    </section>
+
+    <section id="debug-log" class="hidden" aria-live="polite">
+    </section>
+
+    <section id="settings-view" class="hidden" aria-live="polite">
+      <h2>Settings</h2>
+      
+      <div class="form-group">
+        <label for="llm-model">LLM Model</label>
+        <select id="llm-model">
+          <option value="meta-llama/llama-3.1-8b-instruct">Loading models...</option>
+        </select>
+      </div>
+
+      <div class="form-group" id="openrouter-key-group">
+        <label for="openrouter-api-key">OpenRouter API Key</label>
+        <input type="password" id="openrouter-api-key" placeholder="sk-or-v1-...">
+      </div>
+
+      <div class="form-group">
+        <label for="groq-api-key">Groq API Key (Voice STT/TTS)</label>
+        <input type="password" id="groq-api-key" placeholder="gsk_...">
+      </div>
+
+      <div class="form-group checkbox-group">
+        <input type="checkbox" id="rate-limit-toggle">
+        <label for="rate-limit-toggle">Enable Rate Limiting (Delay)</label>
+      </div>
+
+      <div class="form-group" id="rate-limit-duration-group">
+        <label for="rate-limit-duration">Rate Limit Duration (ms)</label>
+        <input type="number" id="rate-limit-duration" value="2100" min="0" step="100">
+      </div>
+
+      <div class="settings-actions">
+        <button id="save-settings-btn" class="primary-btn">Save Settings</button>
+        <span id="save-status" class="status-msg"></span>
+      </div>
+    </section>
+
+    <section id="status-panel" aria-live="polite">
+      <div id="mic-indicator" data-state="idle"></div>
+      <p id="agent-state" class="state-pill">Idle (Alt+Shift+V)</p>
+    </section>
+  </main>
+
+  <script type="module" src="./sidepanel.ts"></script>
+</body>
+</html>
