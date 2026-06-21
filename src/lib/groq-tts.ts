@@ -12,10 +12,10 @@ export async function groqTTS(text: string, apiKey: string): Promise<ArrayBuffer
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'playai-tts',
-        voice: 'Jennifer-PlayAI',
+        model: 'canopylabs/orpheus-v1-english',
+        voice: 'tara',
         input: text,
-        response_format: 'mp3'
+        response_format: 'wav'
       }),
       signal: controller.signal
     });
@@ -77,7 +77,7 @@ export async function speakText(text: string, apiKey?: string): Promise<void> {
         } else {
           try {
             const buffer = await groqTTS(text, apiKey);
-            const blob = new Blob([buffer], { type: 'audio/mp3' });
+            const blob = new Blob([buffer], { type: 'audio/wav' });
             const url = URL.createObjectURL(blob);
             currentAudio = new Audio(url);
             await new Promise<void>((res) => {
