@@ -1,5 +1,5 @@
 // src/lib/classifying.ts
-import { callLLM } from './litellm-client';
+import { callLLM, callZAI } from './litellm-client';
 import type { LLMConfig } from './litellm-client';
 import type { BackgroundContext } from './system-prompt';
 import { buildBgCtxSummary } from './system-prompt';
@@ -70,14 +70,25 @@ export async function classifyTranscript(
 
   const prefix = isRetry ? "Return ONLY raw JSON. No backticks. No explanation.\n\n" : "";
 
-  const responseText = await callLLM(
-    [{ role: 'user', content: prefix + prompt }], 
-    config, 
-    'meta-llama/llama-3.1-8b-instruct', 
-    true,
-    signal,
-    'fast'
-  );
+  let responseText: string;
+  if (config.zaiApiKey) {
+    responseText = await callZAI(
+      [{ role: 'user', content: prefix + prompt }],
+      config.zaiApiKey,
+      'glm-4-flash',
+      true,
+      signal
+    );
+  } else {
+    responseText = await callLLM(
+      [{ role: 'user', content: prefix + prompt }],
+      config,
+      'meta-llama/llama-3.1-8b-instruct',
+      true,
+      signal,
+      'fast'
+    );
+  }
   
   try {
     const cleaned = responseText.replace(/```json/g, '').replace(/```/g, '').trim();

@@ -6,7 +6,7 @@ import { logger } from './logger';
 import { buildFullSystemPrompt } from './system-prompt';
 import type { BackgroundContext } from './system-prompt';
 import type { LLMConfig } from './litellm-client';
-import { callLLM } from './litellm-client';
+import { callLLM, callZAI } from './litellm-client';
 
 export type AgentState = 
   | 'IDLE' | 'LISTENING' | 'TRANSCRIBING' | 'CLASSIFYING' 
@@ -65,9 +65,9 @@ export class AgentManager {
       this.setState('IDLE', 'Error: API Key not set');
       return;
     }
-    if (!this.llmConfig.openRouterApiKey) {
-      this.setState('IDLE', 'Error: OpenRouter API Key missing');
-      this.onSpeak?.('Please enter your OpenRouter API key in the settings.');
+    if (!this.llmConfig.zaiApiKey && !this.llmConfig.openRouterApiKey) {
+      this.setState('IDLE', 'Error: No API Key configured');
+      this.onSpeak?.('Please enter an API key in the settings to get started.');
       return;
     }
 
@@ -112,9 +112,16 @@ export class AgentManager {
             { role: 'user', content: transcript }
           ];
           const model = this.llmConfig.model || 'meta-llama/llama-3.1-8b-instruct';
-          const responseText = await callLLM(
-            llmMessages, this.llmConfig, model, false, currentAbortController.signal, 'fast'
-          );
+          let responseText: string;
+          if (this.llmConfig.zaiApiKey) {
+            responseText = await callZAI(
+              llmMessages, this.llmConfig.zaiApiKey, 'glm-4-flash', false, currentAbortController.signal
+            );
+          } else {
+            responseText = await callLLM(
+              llmMessages, this.llmConfig, model, false, currentAbortController.signal, 'fast'
+            );
+          }
           this.onSpeak?.(responseText);
           await this.history.addTurn('assistant', responseText, this.llmConfig);
         } catch(e) {

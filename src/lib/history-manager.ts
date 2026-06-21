@@ -1,5 +1,5 @@
 // src/lib/history-manager.ts
-import { callLLM } from './litellm-client';
+import { callLLM, callZAI } from './litellm-client';
 import type { LLMMessage, LLMConfig } from './litellm-client';
 
 export class HistoryManager {
@@ -78,21 +78,17 @@ export class HistoryManager {
 
   private async summarizeTurns(turns: LLMMessage[], config: LLMConfig): Promise<string> {
     const prompt = `Summarize these conversation turns in 2-3 sentences, preserving task context and any important decisions made:\n${JSON.stringify(turns)}`;
-    return callLLM(
-      [{ role: 'user', content: prompt }],
-      config,
-      'meta-llama/llama-3.1-8b-instruct',
-      false
-    );
+    if (config.zaiApiKey) {
+      return callZAI([{ role: 'user', content: prompt }], config.zaiApiKey, 'glm-4-flash', false);
+    }
+    return callLLM([{ role: 'user', content: prompt }], config, 'meta-llama/llama-3.1-8b-instruct', false);
   }
 
   private async compressMemories(memories: string[], config: LLMConfig): Promise<string> {
     const prompt = `Synthesize and compress the following long-term memories into a single, concise, cohesive master memory document. Retain all important facts, preferences, and context about the user, but eliminate redundancy:\n${JSON.stringify(memories)}`;
-    return callLLM(
-      [{ role: 'user', content: prompt }],
-      config,
-      'meta-llama/llama-3.1-8b-instruct',
-      false
-    );
+    if (config.zaiApiKey) {
+      return callZAI([{ role: 'user', content: prompt }], config.zaiApiKey, 'glm-4-flash', false);
+    }
+    return callLLM([{ role: 'user', content: prompt }], config, 'meta-llama/llama-3.1-8b-instruct', false);
   }
 }
