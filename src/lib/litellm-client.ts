@@ -20,6 +20,17 @@ let lastCallTime = 0;
 let defaultQueue = Promise.resolve();
 let fastQueue = Promise.resolve();
 
+// Z.ai rate limits:
+//   - 1 concurrent request (no RPM cap)
+//   - Sequential execution already handles the concurrency limit naturally
+//   - No artificial delay needed; exponential backoff on 429
+//
+// OpenRouter rate limits (free tier):
+//   - 20 RPM = one request every 3000ms minimum
+//   - 50 requests/day (1000/day with $10 topup)
+const OPENROUTER_MIN_INTERVAL_MS = 3100; // ~19.4 RPM — safely under 20 RPM limit
+const ZAI_429_BASE_BACKOFF_MS = 2000;    // base backoff on rate limit hit
+
 // ── Z.ai (GLM-4.7-Flash) native caller ─────────────────────────────────────
 export async function callZAI(
   messages: LLMMessage[],
@@ -54,8 +65,10 @@ export async function callZAI(
 
     if (!res.ok) {
       if (res.status === 429 && retries > 0) {
-        logger.warn('ZAI', `Rate limit hit. Retrying... (${retries} left)`);
-        await new Promise(r => setTimeout(r, 1000));
+        // Exponential backoff: 2s, 4s, 8s
+        const backoff = ZAI_429_BASE_BACKOFF_MS * Math.pow(2, 3 - retries);
+        logger.warn('ZAI', `Rate limit hit. Waiting ${backoff}ms before retry... (${retries} left)`);
+        await new Promise(r => setTimeout(r, backoff));
         return callZAI(messages, apiKey, model, jsonMode, signal, retries - 1);
       }
       const errText = await res.text();
@@ -109,7 +122,8 @@ async function executeOpenRouter(
   retries = 3
 ): Promise<string> {
   const isRateLimited = config.rateLimitEnabled !== false;
-  const delayMs = config.rateLimitDurationMs !== undefined ? config.rateLimitDurationMs : 2100;
+  const delayMs = config.rateLimitDurationMs !== undefined ? config.rateLimitDurationMs : OPENROUTER_MIN_INTERVAL_MS;
+
   
   if (isRateLimited) {
     const now = Date.now();
