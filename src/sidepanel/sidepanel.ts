@@ -12,6 +12,7 @@ let mediaRecorder: MediaRecorder | null = null;
 let audioChunks: Blob[] = [];
 let groqApiKey = '';
 let openRouterApiKey = '';
+let zaiApiKey = '';
 
 const indicator = document.getElementById('mic-indicator')!;
 const stateText = document.getElementById('agent-state')!;
@@ -158,6 +159,7 @@ async function loadSettings() {
   selectedModel = (data.selectedModel as string) || 'meta-llama/llama-3.1-8b-instruct';
   openRouterApiKey = data.openRouterApiKey || import.meta.env.VITE_OPENROUTER_API_KEY || '';
   groqApiKey = data.groqApiKey || import.meta.env.VITE_GROQ_API_KEY || '';
+  zaiApiKey = data.zaiApiKey || import.meta.env.VITE_ZAI_API_KEY || '';
   rateLimitEnabled = data.rateLimitEnabled === true;
   rateLimitDurationMs = data.rateLimitDurationMs !== undefined ? (data.rateLimitDurationMs as number) : 0;
 
@@ -170,7 +172,7 @@ async function loadSettings() {
 
   const bgCtx = { name: '', role: '', preferences: [], shortcuts: {}, frequentSites: [], location };
   await agent.configure({ 
-    model: selectedModel, groqApiKey, openRouterApiKey, rateLimitEnabled, rateLimitDurationMs 
+    model: selectedModel, groqApiKey, openRouterApiKey, zaiApiKey, rateLimitEnabled, rateLimitDurationMs 
   }, bgCtx);
 }
 
@@ -180,6 +182,7 @@ saveSettingsBtn.addEventListener('click', async () => {
   selectedModel = llmModelSelect.value;
   openRouterApiKey = openRouterApiKeyInput.value;
   groqApiKey = groqApiKeyInput.value;
+  zaiApiKey = import.meta.env.VITE_ZAI_API_KEY || zaiApiKey;
   rateLimitEnabled = rateLimitToggle.checked;
   rateLimitDurationMs = parseInt(rateLimitDurationInput.value, 10) || 0;
 
@@ -189,7 +192,7 @@ saveSettingsBtn.addEventListener('click', async () => {
 
   const bgCtx = { name: '', role: '', preferences: [], shortcuts: {}, frequentSites: [], location };
   await agent.configure({ 
-    model: selectedModel, groqApiKey, openRouterApiKey, rateLimitEnabled, rateLimitDurationMs 
+    model: selectedModel, groqApiKey, openRouterApiKey, zaiApiKey, rateLimitEnabled, rateLimitDurationMs 
   }, bgCtx);
 
   saveStatus.textContent = 'Saved!';

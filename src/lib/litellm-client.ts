@@ -4,6 +4,8 @@ import { logger } from './logger';
 export interface LLMConfig {
   openRouterApiKey?: string;
   groqApiKey?: string;
+  zaiApiKey?: string;
+  nvidiaApiKey?: string;
   model?: string;
   rateLimitEnabled?: boolean;
   rateLimitDurationMs?: number;
@@ -18,6 +20,65 @@ let lastCallTime = 0;
 let defaultQueue = Promise.resolve();
 let fastQueue = Promise.resolve();
 
+// ── Z.ai (GLM-4.7-Flash) native caller ─────────────────────────────────────
+export async function callZAI(
+  messages: LLMMessage[],
+  apiKey: string,
+  model: string = 'glm-4-flash',
+  jsonMode: boolean = false,
+  signal?: AbortSignal,
+  retries = 3
+): Promise<string> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 20000);
+  if (signal) {
+    signal.addEventListener('abort', () => controller.abort());
+    if (signal.aborted) controller.abort();
+  }
+
+  try {
+    const res = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model,
+        messages,
+        temperature: 0.1,
+        ...(jsonMode && { response_format: { type: 'json_object' } })
+      }),
+      signal: controller.signal
+    });
+
+    if (!res.ok) {
+      if (res.status === 429 && retries > 0) {
+        logger.warn('ZAI', `Rate limit hit. Retrying... (${retries} left)`);
+        await new Promise(r => setTimeout(r, 1000));
+        return callZAI(messages, apiKey, model, jsonMode, signal, retries - 1);
+      }
+      const errText = await res.text();
+      logger.error('ZAI', `Z.ai error ${res.status}`, errText);
+      throw new Error(`Z.ai error: ${res.status}`);
+    }
+
+    const data = await res.json();
+    logger.debug('ZAI', 'Z.ai response received');
+    return data.choices[0].message.content;
+  } catch (e) {
+    if (e instanceof Error && e.name === 'AbortError' && retries > 0 && !signal?.aborted) {
+      logger.warn('ZAI', `Timeout. Retrying... (${retries} left)`);
+      return callZAI(messages, apiKey, model, jsonMode, signal, retries - 1);
+    }
+    logger.error('ZAI', 'Z.ai fetch failed', e);
+    throw e;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+// ── OpenRouter caller (used for optional/fallback models) ───────────────────
 export async function callLLM(
   messages: LLMMessage[],
   config: LLMConfig,

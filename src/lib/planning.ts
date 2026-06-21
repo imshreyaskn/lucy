@@ -1,8 +1,10 @@
 // src/lib/planning.ts
-import { callLLM } from './litellm-client';
+import { callLLM, callZAI } from './litellm-client';
 import type { LLMConfig } from './litellm-client';
 import type { BackgroundContext } from './system-prompt';
 import { buildBgCtxSummary } from './system-prompt';
+import { logger } from './logger';
+
 
 export interface ActionDef {
   page_state_evaluation: string;
@@ -97,13 +99,27 @@ export async function determineNextAction(
 
   const prefix = isRetry ? "Return ONLY raw JSON. No backticks.\n\n" : "";
 
-  const responseText = await callLLM(
-    [{ role: 'user', content: prefix + prompt }], 
-    config, 
-    'meta-llama/llama-3.1-70b-instruct', 
-    true,
-    signal
-  );
+  // Default: Z.ai GLM-4.7-Flash (native, free, 200K context)
+  // Fallback: NVIDIA NIM via OpenRouter if Z.ai key is absent
+  let responseText: string;
+  if (config.zaiApiKey) {
+    responseText = await callZAI(
+      [{ role: 'user', content: prefix + prompt }],
+      config.zaiApiKey,
+      'glm-4-flash',
+      true,
+      signal
+    );
+  } else {
+    logger.warn('Planning', 'Z.ai key not set, falling back to NVIDIA NIM via OpenRouter');
+    responseText = await callLLM(
+      [{ role: 'user', content: prefix + prompt }],
+      config,
+      'nvidia/llama-3.1-nemotron-70b-instruct',
+      true,
+      signal
+    );
+  }
   
   try {
     const cleaned = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
