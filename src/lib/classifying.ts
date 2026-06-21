@@ -75,7 +75,7 @@ export async function classifyTranscript(
     responseText = await callZAI(
       [{ role: 'user', content: prefix + prompt }],
       config.zaiApiKey,
-      'glm-4-flash',
+      'glm-4.7-flash',
       true,
       signal
     );

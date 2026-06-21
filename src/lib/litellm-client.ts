@@ -24,7 +24,7 @@ let fastQueue = Promise.resolve();
 export async function callZAI(
   messages: LLMMessage[],
   apiKey: string,
-  model: string = 'glm-4-flash',
+  model: string = 'glm-4.7-flash',
   jsonMode: boolean = false,
   signal?: AbortSignal,
   retries = 3

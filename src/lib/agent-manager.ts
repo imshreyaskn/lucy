@@ -115,7 +115,7 @@ export class AgentManager {
           let responseText: string;
           if (this.llmConfig.zaiApiKey) {
             responseText = await callZAI(
-              llmMessages, this.llmConfig.zaiApiKey, 'glm-4-flash', false, currentAbortController.signal
+              llmMessages, this.llmConfig.zaiApiKey, 'glm-4.7-flash', false, currentAbortController.signal
             );
           } else {
             responseText = await callLLM(
