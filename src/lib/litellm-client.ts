@@ -16,32 +16,54 @@ export interface LLMMessage {
   content: string;
 }
 
-let lastCallTime = 0;
-let defaultQueue = Promise.resolve();
-let fastQueue = Promise.resolve();
-
 // Z.ai rate limits:
 //   - 1 concurrent request (no RPM cap)
-//   - Sequential execution already handles the concurrency limit naturally
-//   - No artificial delay needed; exponential backoff on 429
+//   - A serial queue ensures we never send two requests simultaneously,
+//     which is the correct way to respect a concurrency-based limit.
+//   - On timeout, wait 10s before retry to let the original request expire
+//     on Z.ai's side before sending a new one.
+//   - On 429, exponential backoff: 5s, 10s, 20s
 //
 // OpenRouter rate limits (free tier):
 //   - 20 RPM = one request every 3000ms minimum
 //   - 50 requests/day (1000/day with $10 topup)
 const OPENROUTER_MIN_INTERVAL_MS = 3100; // ~19.4 RPM — safely under 20 RPM limit
-const ZAI_429_BASE_BACKOFF_MS = 2000;    // base backoff on rate limit hit
+const ZAI_TIMEOUT_MS = 30000;            // 30s — generous timeout for cold starts
+const ZAI_TIMEOUT_BACKOFF_MS = 10000;    // wait 10s after a timeout before retry
+const ZAI_429_BASE_BACKOFF_MS = 5000;    // exponential backoff base on 429: 5s, 10s, 20s
 
-// ── Z.ai (GLM-4.7-Flash) native caller ─────────────────────────────────────
-export async function callZAI(
+let lastOpenRouterCallTime = 0;
+let openRouterQueue = Promise.resolve();
+
+// Single serial queue for Z.ai — enforces the 1-concurrent-request limit
+let zaiQueue: Promise<string | void> = Promise.resolve();
+
+// ── Z.ai (GLM-4.7-Flash) native caller ──────────────────────────────────────
+export function callZAI(
   messages: LLMMessage[],
   apiKey: string,
   model: string = 'glm-4.7-flash',
   jsonMode: boolean = false,
   signal?: AbortSignal,
+): Promise<string> {
+  // Enqueue: only one Z.ai request runs at a time
+  const task = zaiQueue.then(() => executeZAI(messages, apiKey, model, jsonMode, signal, 3));
+  zaiQueue = task.catch(() => {});
+  return task;
+}
+
+async function executeZAI(
+  messages: LLMMessage[],
+  apiKey: string,
+  model: string,
+  jsonMode: boolean,
+  signal?: AbortSignal,
   retries = 3
 ): Promise<string> {
+  if (signal?.aborted) throw new Error('Aborted');
+
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 20000);
+  const timeoutId = setTimeout(() => controller.abort(), ZAI_TIMEOUT_MS);
   if (signal) {
     signal.addEventListener('abort', () => controller.abort());
     if (signal.aborted) controller.abort();
@@ -65,11 +87,11 @@ export async function callZAI(
 
     if (!res.ok) {
       if (res.status === 429 && retries > 0) {
-        // Exponential backoff: 2s, 4s, 8s
+        // Exponential backoff: 5s, 10s, 20s
         const backoff = ZAI_429_BASE_BACKOFF_MS * Math.pow(2, 3 - retries);
-        logger.warn('ZAI', `Rate limit hit. Waiting ${backoff}ms before retry... (${retries} left)`);
+        logger.warn('ZAI', `Rate limit hit. Waiting ${backoff / 1000}s before retry... (${retries} left)`);
         await new Promise(r => setTimeout(r, backoff));
-        return callZAI(messages, apiKey, model, jsonMode, signal, retries - 1);
+        return executeZAI(messages, apiKey, model, jsonMode, signal, retries - 1);
       }
       const errText = await res.text();
       logger.error('ZAI', `Z.ai error ${res.status}`, errText);
@@ -81,8 +103,10 @@ export async function callZAI(
     return data.choices[0].message.content;
   } catch (e) {
     if (e instanceof Error && e.name === 'AbortError' && retries > 0 && !signal?.aborted) {
-      logger.warn('ZAI', `Timeout. Retrying... (${retries} left)`);
-      return callZAI(messages, apiKey, model, jsonMode, signal, retries - 1);
+      // Wait for Z.ai's side to release the slot before retrying
+      logger.warn('ZAI', `Timeout. Waiting ${ZAI_TIMEOUT_BACKOFF_MS / 1000}s before retry... (${retries} left)`);
+      await new Promise(r => setTimeout(r, ZAI_TIMEOUT_BACKOFF_MS));
+      return executeZAI(messages, apiKey, model, jsonMode, signal, retries - 1);
     }
     logger.error('ZAI', 'Z.ai fetch failed', e);
     throw e;
@@ -91,48 +115,44 @@ export async function callZAI(
   }
 }
 
-// ── OpenRouter caller (used for optional/fallback models) ───────────────────
+// ── OpenRouter caller (optional fallback) ────────────────────────────────────
 export async function callLLM(
   messages: LLMMessage[],
   config: LLMConfig,
   model: string,
   jsonMode: boolean = false,
   signal?: AbortSignal,
-  queueType: 'default' | 'fast' = 'default'
+  _queueType: 'default' | 'fast' = 'default'
 ): Promise<string> {
   if (!config.openRouterApiKey) throw new Error('OpenRouter API key not configured');
-  
+
   return new Promise((resolve, reject) => {
-    const queue = queueType === 'fast' ? fastQueue : defaultQueue;
-    const task = queue.then(() => executeOpenRouter(messages, config, model, jsonMode, signal, 3))
+    const task = openRouterQueue
+      .then(() => executeOpenRouter(messages, config, model, jsonMode, signal, 3))
       .then(resolve)
       .catch(reject);
-    
-    if (queueType === 'fast') fastQueue = task.catch(() => {});
-    else defaultQueue = task.catch(() => {});
+    openRouterQueue = task.catch(() => {});
   });
 }
 
 async function executeOpenRouter(
-  messages: LLMMessage[], 
-  config: LLMConfig, 
-  model: string, 
-  jsonMode: boolean, 
+  messages: LLMMessage[],
+  config: LLMConfig,
+  model: string,
+  jsonMode: boolean,
   parentSignal?: AbortSignal,
   retries = 3
 ): Promise<string> {
-  const isRateLimited = config.rateLimitEnabled !== false;
-  const delayMs = config.rateLimitDurationMs !== undefined ? config.rateLimitDurationMs : OPENROUTER_MIN_INTERVAL_MS;
+  const delayMs = config.rateLimitDurationMs !== undefined
+    ? config.rateLimitDurationMs
+    : OPENROUTER_MIN_INTERVAL_MS;
 
-  
-  if (isRateLimited) {
-    const now = Date.now();
-    const timeSinceLastCall = now - lastCallTime;
-    if (timeSinceLastCall < delayMs) {
-      await new Promise(r => setTimeout(r, delayMs - timeSinceLastCall));
-    }
-    lastCallTime = Date.now();
+  const now = Date.now();
+  const timeSinceLastCall = now - lastOpenRouterCallTime;
+  if (timeSinceLastCall < delayMs) {
+    await new Promise(r => setTimeout(r, delayMs - timeSinceLastCall));
   }
+  lastOpenRouterCallTime = Date.now();
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 20000);
@@ -162,19 +182,20 @@ async function executeOpenRouter(
 
     if (!res.ok) {
       if (res.status === 429 && retries > 0) {
-        logger.warn('LiteLLM', `OpenRouter 429 rate limit hit. Queueing retry... (${retries} left)`);
+        logger.warn('LiteLLM', `OpenRouter 429. Retrying... (${retries} left)`);
         return executeOpenRouter(messages, config, model, jsonMode, parentSignal, retries - 1);
       }
       const errText = await res.text();
-      logger.error('LiteLLM', `OpenRouter LLM error ${res.status}`, errText);
+      logger.error('LiteLLM', `OpenRouter error ${res.status}`, errText);
       throw new Error(`OpenRouter LLM error: ${res.status}`);
     }
+
     const data = await res.json();
-    logger.debug('LiteLLM', 'OpenRouter Response received');
+    logger.debug('LiteLLM', 'OpenRouter response received');
     return data.choices[0].message.content;
-  } catch(e) {
+  } catch (e) {
     if (e instanceof Error && e.name === 'AbortError' && retries > 0 && !parentSignal?.aborted) {
-      logger.warn('LiteLLM', `OpenRouter timeout hit. Queueing retry... (${retries} left)`);
+      logger.warn('LiteLLM', `OpenRouter timeout. Retrying... (${retries} left)`);
       return executeOpenRouter(messages, config, model, jsonMode, parentSignal, retries - 1);
     }
     logger.error('LiteLLM', 'OpenRouter fetch failed', e);
