@@ -54,6 +54,36 @@ export function callNVIDIA(
   return task;
 }
 
+// ── NVIDIA NIM vision caller (multimodal: text + screenshot) ─────────────────
+// Model: meta/llama-4-scout-17b-16e-instruct (vision-capable, free on NIM)
+export function callNVIDIAVision(
+  textPrompt: string,
+  screenshotBase64: string,
+  apiKey: string,
+  jsonMode: boolean = false,
+  signal?: AbortSignal,
+): Promise<string> {
+  const messages = [{
+    role: 'user' as const,
+    content: [
+      {
+        type: 'text',
+        text: textPrompt
+      },
+      {
+        type: 'image_url',
+        image_url: {
+          url: `data:image/png;base64,${screenshotBase64}`
+        }
+      }
+    ] as any
+  }];
+  const task = nvidiaQueue.then(() => executeNVIDIA(messages as any, apiKey, 'meta/llama-4-scout-17b-16e-instruct', jsonMode, signal, 3));
+  nvidiaQueue = task.catch(() => {});
+  return task;
+}
+
+
 async function executeNVIDIA(
   messages: LLMMessage[],
   apiKey: string,

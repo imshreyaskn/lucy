@@ -227,6 +227,18 @@ agent.onGetContext = async () => {
   }
 };
 
+agent.onGetScreenshot = async () => {
+  try {
+    const dataUrl = await chrome.tabs.captureVisibleTab({ format: 'png' });
+    // Strip the data URL prefix to get raw base64
+    return dataUrl.replace(/^data:image\/png;base64,/, '');
+  } catch (err) {
+    console.warn('Screenshot capture failed:', err);
+    return null;
+  }
+};
+
+
 agent.onExecuteAction = async (action: any) => {
   const bgActions = ['navigate', 'go_back', 'list_tabs', 'switch_tab', 'close_tab', 'new_tab'];
   if (bgActions.includes(action.action)) {

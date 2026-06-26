@@ -1,5 +1,5 @@
 // src/lib/planning.ts
-import { callLLM, callZAI, callNVIDIA } from './litellm-client';
+import { callLLM, callZAI, callNVIDIA, callNVIDIAVision } from './litellm-client';
 import type { LLMConfig } from './litellm-client';
 import type { BackgroundContext } from './system-prompt';
 import { buildBgCtxSummary } from './system-prompt';
@@ -83,7 +83,8 @@ export async function determineNextAction(
   config: LLMConfig,
   bgCtx: BackgroundContext | null,
   signal?: AbortSignal,
-  isRetry = false
+  isRetry = false,
+  screenshotBase64?: string
 ): Promise<ActionDef> {
   let prompt = PLANNER_PROMPT
     .replace('{{task_summary}}', () => taskSummary)
@@ -99,10 +100,19 @@ export async function determineNextAction(
 
   const prefix = isRetry ? "Return ONLY raw JSON. No backticks.\n\n" : "";
 
-  // Primary: NVIDIA NIM meta/llama-3.1-70b-instruct (40 RPM, consistent)
-  // Fallback: Z.ai GLM-4.7-Flash (if NVIDIA key absent)
+  // If a screenshot is provided, use vision model (llama-4-scout)
+  // Otherwise: NVIDIA text model as primary → Z.ai fallback → OpenRouter last resort
   let responseText: string;
-  if (config.nvidiaApiKey) {
+  if (screenshotBase64 && config.nvidiaApiKey) {
+    logger.info('Planning', 'Using vision model (llama-4-scout) with screenshot');
+    responseText = await callNVIDIAVision(
+      prefix + prompt,
+      screenshotBase64,
+      config.nvidiaApiKey,
+      true,
+      signal
+    );
+  } else if (config.nvidiaApiKey) {
     responseText = await callNVIDIA(
       [{ role: 'user', content: prefix + prompt }],
       config.nvidiaApiKey,

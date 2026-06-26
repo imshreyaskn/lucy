@@ -26,6 +26,7 @@ export class AgentManager {
   public onSpeak?: (text: string) => void;
   public onExecuteAction?: (action: any) => Promise<boolean>;
   public onGetContext?: () => Promise<{ url: string; title: string; semanticText: string; markersText: string }>;
+  public onGetScreenshot?: () => Promise<string | null>;
 
   public async configure(config: LLMConfig, bgCtx?: BackgroundContext) {
     this.llmConfig = config;
@@ -150,7 +151,14 @@ export class AgentManager {
         } else {
           this.pendingTaskSummary = null;
           this.setState('PLANNING', 'Planning execution...');
-          await this.executeTask(classification.summary, currentAbortController.signal);
+          // Capture screenshot if vision is required
+          let screenshot: string | undefined;
+          if (classification.requires_vision && this.onGetScreenshot) {
+            logger.info('AgentManager', 'Vision required — capturing screenshot');
+            const shot = await this.onGetScreenshot();
+            if (shot) screenshot = shot;
+          }
+          await this.executeTask(classification.summary, currentAbortController.signal, screenshot);
         }
       }
     } catch (err: any) {
@@ -162,7 +170,7 @@ export class AgentManager {
     }
   }
 
-  private async executeTask(taskSummary: string, signal: AbortSignal) {
+  private async executeTask(taskSummary: string, signal: AbortSignal, screenshotBase64?: string) {
     if (!this.llmConfig) return;
 
     let stepCount = 0;
@@ -179,8 +187,10 @@ export class AgentManager {
 
       const action = await determineNextAction(
         taskSummary, ctx.url, ctx.title, ctx.semanticText, ctx.markersText, 
-        JSON.stringify(this.history.getHistory()), this.llmConfig, this.bgCtx, signal
+        JSON.stringify(this.history.getHistory()), this.llmConfig, this.bgCtx, signal, false, screenshotBase64
       );
+      // Screenshot only used on first planning step — subsequent steps use DOM context
+      screenshotBase64 = undefined;
 
       if (signal.aborted) break;
 
