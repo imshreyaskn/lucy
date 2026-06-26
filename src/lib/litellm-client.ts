@@ -55,7 +55,6 @@ export function callNVIDIA(
 }
 
 // ── NVIDIA NIM vision caller (multimodal: text + screenshot) ─────────────────
-// Model: meta/llama-4-scout-17b-16e-instruct (vision-capable, free on NIM)
 export function callNVIDIAVision(
   textPrompt: string,
   screenshotBase64: string,
@@ -78,7 +77,7 @@ export function callNVIDIAVision(
       }
     ] as any
   }];
-  const task = nvidiaQueue.then(() => executeNVIDIA(messages as any, apiKey, 'meta/llama-4-scout-17b-16e-instruct', jsonMode, signal, 3));
+  const task = nvidiaQueue.then(() => executeNVIDIA(messages as any, apiKey, 'meta/llama-3.2-90b-vision-instruct', jsonMode, signal, 3));
   nvidiaQueue = task.catch(() => {});
   return task;
 }
@@ -162,6 +161,34 @@ export function callZAI(
   return task;
 }
 
+// ── Z.ai vision caller ───────────────────────────────────────────────────────
+export function callZAIVision(
+  textPrompt: string,
+  screenshotBase64: string,
+  apiKey: string,
+  jsonMode: boolean = false,
+  signal?: AbortSignal,
+): Promise<string> {
+  const messages = [{
+    role: 'user' as const,
+    content: [
+      {
+        type: 'text',
+        text: textPrompt
+      },
+      {
+        type: 'image_url',
+        image_url: {
+          url: `data:image/jpeg;base64,${screenshotBase64}`
+        }
+      }
+    ] as any
+  }];
+  const task = zaiQueue.then(() => executeZAI(messages as any, apiKey, 'glm-4v-flash', jsonMode, signal, 3));
+  zaiQueue = task.catch(() => {});
+  return task;
+}
+
 async function executeZAI(
   messages: LLMMessage[],
   apiKey: string,
@@ -237,6 +264,41 @@ export async function callLLM(
   return new Promise((resolve, reject) => {
     const task = openRouterQueue
       .then(() => executeOpenRouter(messages, config, model, jsonMode, signal, 3))
+      .then(resolve)
+      .catch(reject);
+    openRouterQueue = task.catch(() => {});
+  });
+}
+
+// ── OpenRouter vision caller ─────────────────────────────────────────────────
+export async function callLLMVision(
+  textPrompt: string,
+  screenshotBase64: string,
+  config: LLMConfig,
+  jsonMode: boolean = false,
+  signal?: AbortSignal,
+): Promise<string> {
+  if (!config.openRouterApiKey) throw new Error('OpenRouter API key not configured');
+
+  const messages = [{
+    role: 'user' as const,
+    content: [
+      {
+        type: 'text',
+        text: textPrompt
+      },
+      {
+        type: 'image_url',
+        image_url: {
+          url: `data:image/jpeg;base64,${screenshotBase64}`
+        }
+      }
+    ] as any
+  }];
+
+  return new Promise((resolve, reject) => {
+    const task = openRouterQueue
+      .then(() => executeOpenRouter(messages as any, config, 'google/gemini-2.5-flash', jsonMode, signal, 3))
       .then(resolve)
       .catch(reject);
     openRouterQueue = task.catch(() => {});

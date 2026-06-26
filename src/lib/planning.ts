@@ -1,5 +1,5 @@
 // src/lib/planning.ts
-import { callLLM, callZAI, callNVIDIA, callNVIDIAVision } from './litellm-client';
+import { callLLM, callZAI, callNVIDIA, callNVIDIAVision, callZAIVision, callLLMVision } from './litellm-client';
 import type { LLMConfig } from './litellm-client';
 import type { BackgroundContext } from './system-prompt';
 import { buildBgCtxSummary } from './system-prompt';
@@ -10,6 +10,7 @@ export interface ActionDef {
   page_state_evaluation: string;
   task_state_evaluation: string;
   is_goal_achieved: boolean;
+  needs_screenshot?: boolean;
   action: 'click' | 'type' | 'press_enter' | 'press_key' | 'scroll_down' | 'scroll_up' | 'navigate' | 'go_back' | 'wait' | 'done' | 'fail' | 'list_tabs' | 'switch_tab' | 'close_tab' | 'new_tab' | 'answer' | 'media';
   target_id?: number;
   text?: string;
@@ -60,8 +61,9 @@ If the background context contains the user's Location, automatically localize s
 Return ONLY valid JSON:
 {
   "page_state_evaluation": "A detailed internal analysis of what is currently on the screen. Is this the final destination, or is there an interstitial, cookie wall, captcha, or popup blocking the main content?",
-  "task_state_evaluation": "Analyze the execution history. Has the requested task already been successfully completed? (e.g. If the task is a stateless action like 'scroll down' or 'pause video' and the history shows it was just successfully executed, the task is complete).",
+  "task_state_evaluation": "Analyze the execution history. Has the requested task already been successfully completed?",
   "is_goal_achieved": boolean,
+  "needs_screenshot": boolean (Set true ONLY when visual inspection is necessary to proceed — e.g. verifying you landed on the right page, reading visible results or images, confirming UI state that is not captured in the semantic text. Set false for typing, navigating, or any step where DOM text is sufficient.),
   "action": "click" | "type" | "press_enter" | "press_key" | "scroll_down" | "scroll_up" | "navigate" | "go_back" | "wait" | "done" | "fail" | "list_tabs" | "switch_tab" | "close_tab" | "new_tab" | "answer" | "media",
   "target_id": number (required for click, type),
   "text": string (required for type, press_key, answer, media. For scroll_down/scroll_up, optionally provide "small", "medium", or "large"),
@@ -100,18 +102,19 @@ export async function determineNextAction(
 
   const prefix = isRetry ? "Return ONLY raw JSON. No backticks.\n\n" : "";
 
-  // If a screenshot is provided, use vision model (llama-4-scout)
-  // Otherwise: NVIDIA text model as primary → Z.ai fallback → OpenRouter last resort
   let responseText: string;
-  if (screenshotBase64 && config.nvidiaApiKey) {
-    logger.info('Planning', 'Using vision model (llama-4-scout) with screenshot');
-    responseText = await callNVIDIAVision(
-      prefix + prompt,
-      screenshotBase64,
-      config.nvidiaApiKey,
-      true,
-      signal
-    );
+
+  if (screenshotBase64) {
+    if (config.nvidiaApiKey) {
+      logger.info('Planning', 'Vision re-plan: using NVIDIA llama-3.2-90b-vision with screenshot');
+      responseText = await callNVIDIAVision(prefix + prompt, screenshotBase64, config.nvidiaApiKey, true, signal);
+    } else if (config.zaiApiKey) {
+      logger.info('Planning', 'Vision re-plan: using ZAI glm-4v-flash with screenshot');
+      responseText = await callZAIVision(prefix + prompt, screenshotBase64, config.zaiApiKey, true, signal);
+    } else {
+      logger.info('Planning', 'Vision re-plan: using OpenRouter gemini-2.5-flash with screenshot');
+      responseText = await callLLMVision(prefix + prompt, screenshotBase64, config, true, signal);
+    }
   } else if (config.nvidiaApiKey) {
     responseText = await callNVIDIA(
       [{ role: 'user', content: prefix + prompt }],
@@ -139,14 +142,16 @@ export async function determineNextAction(
       signal
     );
   }
-  
+
   try {
     const cleaned = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
     return JSON.parse(cleaned) as ActionDef;
   } catch (err) {
     if (!isRetry) {
-      return determineNextAction(taskSummary, url, title, semanticText, markersText, historySummary, config, bgCtx, signal, true);
+      // Pass screenshot through on retry so vision context is preserved
+      return determineNextAction(taskSummary, url, title, semanticText, markersText, historySummary, config, bgCtx, signal, true, screenshotBase64);
     }
     throw new Error('Failed to parse planner JSON');
   }
 }
+

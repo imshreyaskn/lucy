@@ -229,9 +229,12 @@ agent.onGetContext = async () => {
 
 agent.onGetScreenshot = async () => {
   try {
-    const dataUrl = await chrome.tabs.captureVisibleTab({ format: 'png' });
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    const windowId = tabs[0]?.windowId;
+    // Use JPEG at 50% quality to avoid payload-too-large errors and speed up requests
+    const dataUrl = await chrome.tabs.captureVisibleTab(windowId, { format: 'jpeg', quality: 50 });
     // Strip the data URL prefix to get raw base64
-    return dataUrl.replace(/^data:image\/png;base64,/, '');
+    return dataUrl.replace(/^data:image\/jpeg;base64,/, '');
   } catch (err) {
     console.warn('Screenshot capture failed:', err);
     return null;

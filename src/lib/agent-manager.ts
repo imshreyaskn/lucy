@@ -151,14 +151,7 @@ export class AgentManager {
         } else {
           this.pendingTaskSummary = null;
           this.setState('PLANNING', 'Planning execution...');
-          // Capture screenshot if vision is required
-          let screenshot: string | undefined;
-          if (classification.requires_vision && this.onGetScreenshot) {
-            logger.info('AgentManager', 'Vision required — capturing screenshot');
-            const shot = await this.onGetScreenshot();
-            if (shot) screenshot = shot;
-          }
-          await this.executeTask(classification.summary, currentAbortController.signal, screenshot);
+          await this.executeTask(classification.summary, currentAbortController.signal);
         }
       }
     } catch (err: any) {
@@ -170,7 +163,7 @@ export class AgentManager {
     }
   }
 
-  private async executeTask(taskSummary: string, signal: AbortSignal, screenshotBase64?: string) {
+  private async executeTask(taskSummary: string, signal: AbortSignal) {
     if (!this.llmConfig) return;
 
     let stepCount = 0;
@@ -181,16 +174,29 @@ export class AgentManager {
       if (signal.aborted) break;
       stepCount++;
       this.setState('PLANNING', `Planning step ${stepCount}...`);
-      
+
       const ctx = await this.onGetContext?.();
       if (!ctx || signal.aborted) break;
 
-      const action = await determineNextAction(
-        taskSummary, ctx.url, ctx.title, ctx.semanticText, ctx.markersText, 
-        JSON.stringify(this.history.getHistory()), this.llmConfig, this.bgCtx, signal, false, screenshotBase64
+      // Step 1: text-only plan (fast, cheap)
+      let action = await determineNextAction(
+        taskSummary, ctx.url, ctx.title, ctx.semanticText, ctx.markersText,
+        JSON.stringify(this.history.getHistory()), this.llmConfig, this.bgCtx, signal
       );
-      // Screenshot only used on first planning step — subsequent steps use DOM context
-      screenshotBase64 = undefined;
+
+      // Step 2: if planner says it needs a screenshot, re-plan with vision model
+      if (action.needs_screenshot && this.onGetScreenshot) {
+        this.setState('PLANNING', 'Analyzing screen...');
+        logger.info('AgentManager', `Step ${stepCount}: vision re-plan requested`);
+        const screenshot = await this.onGetScreenshot();
+        if (screenshot) {
+          action = await determineNextAction(
+            taskSummary, ctx.url, ctx.title, ctx.semanticText, ctx.markersText,
+            JSON.stringify(this.history.getHistory()), this.llmConfig, this.bgCtx, signal,
+            false, screenshot
+          );
+        }
+      }
 
       if (signal.aborted) break;
 
