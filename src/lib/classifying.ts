@@ -12,7 +12,6 @@ export interface Classification {
   risk: 'low' | 'high';
   summary: string;
   clarification_question: string | null;
-  requires_vision: boolean;
 }
 
 const CLASSIFIER_PROMPT = `
@@ -24,28 +23,36 @@ Recent History:
 
 User said: "{{transcript}}"
 
-Classify and return exactly this JSON structure:
-{
-  "intent_evaluation": "Analyze the raw transcript against the semantic context of the current webpage. Evaluate if the transcript contains phonetic Speech-to-Text errors. If the literal text makes no logical sense in the current environment but a phonetically similar phrase does, state the correction. If the intent is entirely ambiguous or unsafe to guess, mark it as ambiguous.",
-  "type": "generic" | "task" | "confirmation" | "cancellation",
-  "ambiguity": "clear" | "ambiguous",
-  "scope": "single" | "multi-step",
-  "risk": "low" | "high",
-  "summary": "one-sentence task description (auto-corrected if necessary, empty string if generic/confirmation/cancellation)",
-  "clarification_question": "conversational question text if ambiguous, null otherwise",
-  "requires_vision": boolean (Set to true ONLY if the user's request requires visually analyzing page aesthetics, layout, colors, or images. Set to false for standard text reading and navigation.)
-}
+Analyze the user's intent and return a JSON object with the following schema:
+- "intent_evaluation": Your detailed internal analysis of the raw transcript. Evaluate if there are phonetic Speech-to-Text errors. If the literal text makes no logical sense in the current environment but a phonetically similar phrase does, state the correction.
+- "type": Must be "generic", "task", "confirmation", or "cancellation".
+- "ambiguity": Must be "clear" or "ambiguous".
+- "scope": Must be "single" or "multi-step".
+- "risk": Must be "low" or "high".
+- "summary": A clean, direct one-sentence description of what the user wants to accomplish. (Auto-corrected if necessary. Empty string if generic/confirmation/cancellation). DO NOT prefix with "The user wants to".
+- "clarification_question": Conversational question text if ambiguous, null otherwise.
 
 Rules for "type":
 - "confirmation": The user is answering "yes" or confirming a previous question from the assistant in the history.
 - "cancellation": The user is answering "no", "stop", or cancelling a previous action.
-- "task": The user wants to perform an action on the page.
+- "task": The user wants to perform an action on the page, navigate, or find information.
 - "generic": Small talk, conversational, or unrelated statements.
 
 Risk Assessment:
 - HIGH risk: financial transactions, sending emails/messages, account deletions, irreversible changes.
 - LOW risk: Navigation (going to URLs), searching, clicking normal links, reading, media control.
 - Ambiguous means proceeding would likely produce the WRONG outcome or you cannot confidently guess the typo. Ask a clarifying question if ambiguous.
+
+Return EXACTLY this JSON structure:
+{
+  "intent_evaluation": "...",
+  "type": "task",
+  "ambiguity": "clear",
+  "scope": "single",
+  "risk": "low",
+  "summary": "...",
+  "clarification_question": null
+}
 `;
 
 export async function classifyTranscript(
