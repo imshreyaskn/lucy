@@ -243,6 +243,11 @@ agent.onGetScreenshot = async () => {
 
 
 agent.onExecuteAction = async (action: any) => {
+  if (action.action === 'wait') {
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    return true;
+  }
+
   const bgActions = ['navigate', 'go_back', 'list_tabs', 'switch_tab', 'close_tab', 'new_tab'];
   if (bgActions.includes(action.action)) {
     return await chrome.runtime.sendMessage({ type: 'EXECUTE_BG_ACTION', action });
