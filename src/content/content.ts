@@ -132,6 +132,11 @@ async function handleExecuteAction(action: any): Promise<boolean> {
     if (action.action === 'navigate' || action.action === 'go_back' || action.action === 'switch_tab') {
       return false; // handled by background script
     }
+
+    if (action.action === 'wait') {
+      await sleep(3000);
+      return true;
+    }
     
     await waitForDomSettle(1500);
     return false; // navigate and go_back handled by background script
