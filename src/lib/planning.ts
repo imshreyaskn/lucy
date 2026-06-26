@@ -1,5 +1,5 @@
 // src/lib/planning.ts
-import { callLLM, callZAI } from './litellm-client';
+import { callLLM, callZAI, callNVIDIA } from './litellm-client';
 import type { LLMConfig } from './litellm-client';
 import type { BackgroundContext } from './system-prompt';
 import { buildBgCtxSummary } from './system-prompt';
@@ -99,10 +99,19 @@ export async function determineNextAction(
 
   const prefix = isRetry ? "Return ONLY raw JSON. No backticks.\n\n" : "";
 
-  // Default: Z.ai GLM-4.7-Flash (native, free, 200K context)
-  // Fallback: NVIDIA NIM via OpenRouter if Z.ai key is absent
+  // Primary: NVIDIA NIM meta/llama-3.1-70b-instruct (40 RPM, consistent)
+  // Fallback: Z.ai GLM-4.7-Flash (if NVIDIA key absent)
   let responseText: string;
-  if (config.zaiApiKey) {
+  if (config.nvidiaApiKey) {
+    responseText = await callNVIDIA(
+      [{ role: 'user', content: prefix + prompt }],
+      config.nvidiaApiKey,
+      'meta/llama-3.1-70b-instruct',
+      true,
+      signal
+    );
+  } else if (config.zaiApiKey) {
+    logger.warn('Planning', 'NVIDIA key not set, falling back to Z.ai');
     responseText = await callZAI(
       [{ role: 'user', content: prefix + prompt }],
       config.zaiApiKey,
@@ -111,7 +120,7 @@ export async function determineNextAction(
       signal
     );
   } else {
-    logger.warn('Planning', 'Z.ai key not set, falling back to NVIDIA NIM via OpenRouter');
+    logger.warn('Planning', 'No primary key set, falling back to OpenRouter');
     responseText = await callLLM(
       [{ role: 'user', content: prefix + prompt }],
       config,

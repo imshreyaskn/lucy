@@ -6,7 +6,7 @@ import { logger } from './logger';
 import { buildFullSystemPrompt } from './system-prompt';
 import type { BackgroundContext } from './system-prompt';
 import type { LLMConfig } from './litellm-client';
-import { callLLM, callZAI } from './litellm-client';
+import { callLLM, callZAI, callNVIDIA } from './litellm-client';
 
 export type AgentState = 
   | 'IDLE' | 'LISTENING' | 'TRANSCRIBING' | 'CLASSIFYING' 
@@ -65,7 +65,7 @@ export class AgentManager {
       this.setState('IDLE', 'Error: API Key not set');
       return;
     }
-    if (!this.llmConfig.zaiApiKey && !this.llmConfig.openRouterApiKey) {
+    if (!this.llmConfig.nvidiaApiKey && !this.llmConfig.zaiApiKey && !this.llmConfig.openRouterApiKey) {
       this.setState('IDLE', 'Error: No API Key configured');
       this.onSpeak?.('Please enter an API key in the settings to get started.');
       return;
@@ -111,9 +111,13 @@ export class AgentManager {
             ...historyMsgs,
             { role: 'user', content: transcript }
           ];
-          const model = this.llmConfig.model || 'meta-llama/llama-3.1-8b-instruct';
+          const model = this.llmConfig.model || 'meta/llama-3.1-8b-instruct';
           let responseText: string;
-          if (this.llmConfig.zaiApiKey) {
+          if (this.llmConfig.nvidiaApiKey) {
+            responseText = await callNVIDIA(
+              llmMessages, this.llmConfig.nvidiaApiKey, 'meta/llama-3.1-8b-instruct', false, currentAbortController.signal
+            );
+          } else if (this.llmConfig.zaiApiKey) {
             responseText = await callZAI(
               llmMessages, this.llmConfig.zaiApiKey, 'glm-4.7-flash', false, currentAbortController.signal
             );
