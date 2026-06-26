@@ -99,7 +99,7 @@ async function executeNVIDIA(
   lastNvidiaCallTime = Date.now();
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 20000);
+  const timeoutId = setTimeout(() => controller.abort(), 45000);
   if (signal) {
     signal.addEventListener('abort', () => controller.abort());
     if (signal.aborted) controller.abort();
@@ -321,7 +321,7 @@ async function executeOpenRouter(
   lastOpenRouterCallTime = Date.now();
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 20000);
+  const timeoutId = setTimeout(() => controller.abort(), 45000);
   if (parentSignal) {
     parentSignal.addEventListener('abort', () => controller.abort());
     if (parentSignal.aborted) controller.abort();
