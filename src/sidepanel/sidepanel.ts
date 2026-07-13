@@ -1,19 +1,16 @@
 // src/sidepanel/sidepanel.ts
 import { AgentManager } from '../lib/agent-manager';
-import type { AgentState } from '../lib/agent-manager';
+import type { StateSnapshot } from '../lib/agent-manager';
 import { logger } from '../lib/logger';
-import { transcribeAudio, isSilenceHallucination } from '../lib/groq-stt';
-import { speakText, stopAudio } from '../lib/groq-tts';
-import { callLLM } from '../lib/litellm-client';
+import { speakText, stopAudio } from '../lib/speaker';
+import { callGemini } from '../lib/litellm-client';
 import { fetchUserLocation } from '../lib/ip-location';
 
 let isRecording = false;
-let mediaRecorder: MediaRecorder | null = null;
-let audioChunks: Blob[] = [];
-let groqApiKey = '';
-let openRouterApiKey = '';
-let zaiApiKey = '';
-let nvidiaApiKey = '';
+let recognition: any = null;
+let geminiModel = 'gemini-3.1-flash-lite';
+let geminiApiKey = '';
+let visionEnabled = true;
 
 const indicator = document.getElementById('mic-indicator')!;
 const stateText = document.getElementById('agent-state')!;
@@ -24,12 +21,13 @@ const debugBtn = document.getElementById('debug-btn')!;
 const settingsBtn = document.getElementById('settings-btn')!;
 const settingsView = document.getElementById('settings-view')!;
 
-const llmModelSelect = document.getElementById('llm-model') as HTMLSelectElement;
-const openRouterApiKeyInput = document.getElementById('openrouter-api-key') as HTMLInputElement;
-const groqApiKeyInput = document.getElementById('groq-api-key') as HTMLInputElement;
+const geminiModelSelect = document.getElementById('gemini-model') as HTMLSelectElement;
+const geminiApiKeyInput = document.getElementById('gemini-api-key') as HTMLInputElement;
+const visionToggle = document.getElementById('vision-toggle') as HTMLInputElement;
 const rateLimitToggle = document.getElementById('rate-limit-toggle') as HTMLInputElement;
 const rateLimitDurationInput = document.getElementById('rate-limit-duration') as HTMLInputElement;
 const saveSettingsBtn = document.getElementById('save-settings-btn') as HTMLButtonElement;
+const exportDataBtn = document.getElementById('export-data-btn') as HTMLButtonElement;
 const saveStatus = document.getElementById('save-status')!;
 
 let isDebugVisible = false;
@@ -38,17 +36,15 @@ let isSettingsVisible = false;
 debugBtn.addEventListener('click', () => {
   isDebugVisible = !isDebugVisible;
   if (isDebugVisible) {
-    chatLog.classList.add('hidden');
-    settingsView.classList.add('hidden');
-    debugLog.classList.remove('hidden');
+    debugLog.classList.add('active');
     debugBtn.style.color = 'var(--text-color)';
     debugLog.scrollTop = debugLog.scrollHeight;
     
     isSettingsVisible = false;
+    settingsView.classList.remove('active');
     settingsBtn.style.color = 'var(--text-muted)';
   } else {
-    debugLog.classList.add('hidden');
-    chatLog.classList.remove('hidden');
+    debugLog.classList.remove('active');
     debugBtn.style.color = 'var(--text-muted)';
     chatLog.scrollTop = chatLog.scrollHeight;
   }
@@ -57,22 +53,20 @@ debugBtn.addEventListener('click', () => {
 settingsBtn.addEventListener('click', () => {
   isSettingsVisible = !isSettingsVisible;
   if (isSettingsVisible) {
-    chatLog.classList.add('hidden');
-    debugLog.classList.add('hidden');
-    settingsView.classList.remove('hidden');
+    settingsView.classList.add('active');
     settingsBtn.style.color = 'var(--text-color)';
     
+    setTimeout(() => geminiModelSelect.focus(), 100);
+    
     isDebugVisible = false;
+    debugLog.classList.remove('active');
     debugBtn.style.color = 'var(--text-muted)';
   } else {
-    settingsView.classList.add('hidden');
-    chatLog.classList.remove('hidden');
+    settingsView.classList.remove('active');
     settingsBtn.style.color = 'var(--text-muted)';
     chatLog.scrollTop = chatLog.scrollHeight;
   }
 });
-
-// Model dropdown is dynamic now, no toggle needed here.
 
 window.addEventListener('agent-log', (e: any) => {
   const entry = e.detail;
@@ -97,7 +91,7 @@ resetBtn.addEventListener('click', async () => {
     <div id="welcome-card" class="message agent">
       <div class="message-header">Lucy</div>
       <div class="message-body">
-        Hi! I'm Lucy, your voice assistant. Press <strong>Alt+Shift+V</strong> or click the microphone below to start talking.
+        Hi! I'm Lucy, your voice assistant. Press <strong>Ctrl+Space</strong> or click the microphone below to start talking.
       </div>
     </div>
   `;
@@ -107,110 +101,94 @@ resetBtn.addEventListener('click', async () => {
 const agent = new AgentManager();
 const location = await fetchUserLocation();
 
-let selectedModel = 'meta-llama/llama-3.1-8b-instruct';
 let rateLimitEnabled = false;
 let rateLimitDurationMs = 0;
 
-async function fetchOpenRouterModels() {
-  try {
-    const res = await fetch('https://openrouter.ai/api/v1/models');
-    if (!res.ok) throw new Error('Failed to fetch models');
-    const data = await res.json();
-    
-    llmModelSelect.innerHTML = '';
-    
-    // Group models by provider (the string before the slash)
-    const groups: Record<string, any[]> = {};
-    for (const model of data.data) {
-      const provider = model.id.split('/')[0];
-      if (!groups[provider]) groups[provider] = [];
-      groups[provider].push(model);
-    }
-    
-    // Sort providers
-    const sortedProviders = Object.keys(groups).sort();
-    for (const provider of sortedProviders) {
-      const optGroup = document.createElement('optgroup');
-      optGroup.label = provider.toUpperCase();
-      
-      // Sort models within provider
-      groups[provider].sort((a, b) => a.name.localeCompare(b.name));
-      
-      for (const model of groups[provider]) {
-        const option = document.createElement('option');
-        option.value = model.id;
-        option.textContent = model.name;
-        optGroup.appendChild(option);
-      }
-      llmModelSelect.appendChild(optGroup);
-    }
-    
-    llmModelSelect.value = selectedModel;
-  } catch (err) {
-    console.error('Failed to load OpenRouter models:', err);
-    llmModelSelect.innerHTML = '<option value="meta-llama/llama-3.1-8b-instruct">Fallback (Llama 3.1 8B)</option>';
-  }
-}
-
 async function loadSettings() {
   const data = await chrome.storage.local.get([
-    'selectedModel', 'openRouterApiKey', 'groqApiKey', 'rateLimitEnabled', 'rateLimitDurationMs'
+    'geminiModel', 'geminiApiKey', 'visionEnabled', 'rateLimitEnabled', 'rateLimitDurationMs'
   ]);
 
-  selectedModel = (data.selectedModel as string) || 'meta/llama-3.1-8b-instruct';
-  openRouterApiKey = data.openRouterApiKey || import.meta.env.VITE_OPENROUTER_API_KEY || '';
-  groqApiKey = data.groqApiKey || import.meta.env.VITE_GROQ_API_KEY || '';
-  zaiApiKey = data.zaiApiKey || import.meta.env.VITE_ZAI_API_KEY || '';
-  nvidiaApiKey = data.nvidiaApiKey || import.meta.env.VITE_NVIDIA_NIM_API_KEY || '';
+  geminiModel = (data.geminiModel as string) || 'gemini-3.1-flash-lite';
+  geminiApiKey = (data.geminiApiKey as string) || '';
+  visionEnabled = data.visionEnabled !== false;
   rateLimitEnabled = data.rateLimitEnabled === true;
   rateLimitDurationMs = data.rateLimitDurationMs !== undefined ? (data.rateLimitDurationMs as number) : 0;
 
-  openRouterApiKeyInput.value = openRouterApiKey;
-  groqApiKeyInput.value = groqApiKey;
+  geminiModelSelect.value = geminiModel;
+  geminiApiKeyInput.value = geminiApiKey;
+  visionToggle.checked = visionEnabled;
   rateLimitToggle.checked = rateLimitEnabled;
   rateLimitDurationInput.value = rateLimitDurationMs.toString();
 
-  await fetchOpenRouterModels();
-
   const bgCtx = { name: '', role: '', preferences: [], shortcuts: {}, frequentSites: [], location };
   await agent.configure({ 
-    model: selectedModel, groqApiKey, openRouterApiKey, zaiApiKey, nvidiaApiKey, rateLimitEnabled, rateLimitDurationMs 
+    geminiModel, geminiApiKey, visionEnabled, rateLimitEnabled, rateLimitDurationMs 
   }, bgCtx);
 }
 
 await loadSettings();
 
 saveSettingsBtn.addEventListener('click', async () => {
-  selectedModel = llmModelSelect.value;
-  openRouterApiKey = openRouterApiKeyInput.value;
-  groqApiKey = groqApiKeyInput.value;
-  nvidiaApiKey = import.meta.env.VITE_NVIDIA_NIM_API_KEY || nvidiaApiKey;
-  zaiApiKey = import.meta.env.VITE_ZAI_API_KEY || zaiApiKey;
+  geminiModel = geminiModelSelect.value;
+  geminiApiKey = geminiApiKeyInput.value;
+  visionEnabled = visionToggle.checked;
   rateLimitEnabled = rateLimitToggle.checked;
   rateLimitDurationMs = parseInt(rateLimitDurationInput.value, 10) || 0;
 
   await chrome.storage.local.set({
-    selectedModel, openRouterApiKey, groqApiKey, rateLimitEnabled, rateLimitDurationMs
+    geminiModel, geminiApiKey, visionEnabled, rateLimitEnabled, rateLimitDurationMs
   });
 
   const bgCtx = { name: '', role: '', preferences: [], shortcuts: {}, frequentSites: [], location };
   await agent.configure({ 
-    model: selectedModel, groqApiKey, openRouterApiKey, zaiApiKey, nvidiaApiKey, rateLimitEnabled, rateLimitDurationMs 
+    geminiModel, geminiApiKey, visionEnabled, rateLimitEnabled, rateLimitDurationMs 
   }, bgCtx);
 
   saveStatus.textContent = 'Saved!';
   setTimeout(() => saveStatus.textContent = '', 2000);
 });
 
+exportDataBtn.addEventListener('click', async () => {
+  const localData = await chrome.storage.local.get(null);
+  const sessionData = await chrome.storage.session.get(null);
+  
+  const payload = {
+    settings: {
+      geminiModel: localData.geminiModel,
+      visionEnabled: localData.visionEnabled,
+      rateLimitEnabled: localData.rateLimitEnabled,
+      rateLimitDurationMs: localData.rateLimitDurationMs
+    },
+    longTermMemories: localData.longTermMemories || [],
+    chatHistory: sessionData.chatHistory || []
+  };
+
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `lucy-data-export-${new Date().toISOString().split('T')[0]}.json`;
+  a.click();
+  
+  URL.revokeObjectURL(url);
+});
+
 // Configure Agent Callbacks
-agent.onStateChange = (_state: AgentState, message: string) => {
-  stateText.textContent = message;
-  indicator.dataset.state = _state.toLowerCase();
+agent.onStateChange = (snap: StateSnapshot) => {
+  let statusText = snap.message;
+  if (snap.waitReason) statusText += ` (${snap.waitReason})`;
+  if (snap.stepCount > 0) statusText += ` [Step ${snap.stepCount}]`;
+  if (snap.consecutiveFailures > 0) statusText += ` (Failures: ${snap.consecutiveFailures})`;
+  
+  stateText.textContent = statusText;
+  indicator.dataset.state = snap.state.toLowerCase();
 };
 
 agent.onSpeak = (text: string) => {
   appendLog('Agent', text);
-  speakText(text, groqApiKey).catch(console.error);
+  speakText(text).catch(console.error);
 };
 
 agent.onGetContext = async () => {
@@ -221,9 +199,16 @@ agent.onGetContext = async () => {
   try {
     const ctx = await chrome.tabs.sendMessage(tabId, { type: 'GET_CONTEXT' });
     return ctx;
-  } catch (err) {
+  } catch (err: any) {
     console.error('Failed to get context from page:', err);
-    return { url: tabs[0].url || '', title: tabs[0].title || '', semanticText: '', markersText: '' };
+    const url = tabs[0].url || '';
+    if (err.message && err.message.includes('Receiving end does not exist')) {
+      if (!url.startsWith('chrome://') && !url.startsWith('edge://') && !url.startsWith('about:')) {
+        agent.onSpeak?.('I lost connection to the page. I am refreshing it for you now.');
+        chrome.tabs.reload(tabId);
+      }
+    }
+    return { url, title: tabs[0].title || '', semanticText: '', markersText: '' };
   }
 };
 
@@ -231,9 +216,7 @@ agent.onGetScreenshot = async () => {
   try {
     const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
     const windowId = tabs[0]?.windowId;
-    // Use JPEG at 50% quality to avoid payload-too-large errors and speed up requests
     const dataUrl = await chrome.tabs.captureVisibleTab(windowId, { format: 'jpeg', quality: 50 });
-    // Strip the data URL prefix to get raw base64
     return dataUrl.replace(/^data:image\/jpeg;base64,/, '');
   } catch (err) {
     console.warn('Screenshot capture failed:', err);
@@ -241,8 +224,21 @@ agent.onGetScreenshot = async () => {
   }
 };
 
-
 agent.onExecuteAction = async (action: any) => {
+  let actionText = '';
+  switch (action.action) {
+    case 'navigate': actionText = `Navigating to ${action.url}`; break;
+    case 'click': actionText = `Clicking element`; break;
+    case 'type': actionText = `Typing "${action.text}"`; break;
+    case 'scroll': actionText = `Scrolling page`; break;
+    case 'wait': actionText = `Waiting...`; break;
+    case 'go_back': actionText = `Going back`; break;
+    case 'switch_tab': actionText = `Switching tab`; break;
+    case 'close_tab': actionText = `Closing tab`; break;
+    default: actionText = `Executing: ${action.action}`; break;
+  }
+  appendLog('Action', actionText);
+
   if (action.action === 'wait') {
     await new Promise(resolve => setTimeout(resolve, 3000));
     return true;
@@ -257,8 +253,15 @@ agent.onExecuteAction = async (action: any) => {
     if (!tabId) return false;
     try {
       return await chrome.tabs.sendMessage(tabId, { type: 'EXECUTE_ACTION', action });
-    } catch (err) {
+    } catch (err: any) {
       logger.error('SidePanel', 'Failed to send EXECUTE_ACTION to tab', err);
+      const url = tabs[0].url || '';
+      if (err.message && err.message.includes('Receiving end does not exist')) {
+        if (!url.startsWith('chrome://') && !url.startsWith('edge://') && !url.startsWith('about:')) {
+          agent.onSpeak?.('I lost connection to the page. I am refreshing it for you now.');
+          chrome.tabs.reload(tabId);
+        }
+      }
       return false;
     }
   }
@@ -270,70 +273,136 @@ chrome.runtime.onMessage.addListener((message: any) => {
   }
 });
 
-function appendLog(role: string, text: string) {
-  const displayRole = role === 'Agent' ? 'Lucy' : role;
+function appendLog(role: string, text: string, isInterim = false) {
+  const displayRole = role === 'Agent' ? 'Lucy' : (role === 'Action' ? '' : role);
   const div = document.createElement('div');
-  div.className = `message ${role.toLowerCase()}`;
   
-  const header = document.createElement('div');
-  header.className = 'message-header';
-  header.textContent = displayRole;
-  
-  const body = document.createElement('div');
-  body.className = 'message-body';
-  body.textContent = text;
-  
-  div.appendChild(header);
-  div.appendChild(body);
+  if (role === 'Action') {
+    div.className = 'message action';
+    div.innerHTML = `<div class="message-body"><i>${text}</i></div>`;
+  } else {
+    div.className = `message ${role.toLowerCase()} ${isInterim ? 'interim' : ''}`;
+    
+    const header = document.createElement('div');
+    header.className = 'message-header';
+    header.textContent = displayRole;
+    
+    const body = document.createElement('div');
+    body.className = 'message-body';
+    body.textContent = text;
+    
+    div.appendChild(header);
+    div.appendChild(body);
+  }
   
   chatLog.appendChild(div);
   chatLog.scrollTop = chatLog.scrollHeight;
+  return div;
 }
 
 async function toggleRecording() {
   if (isRecording) {
     stopRecording();
-  } else {
-    await startRecording();
+    return;
   }
-}
 
-async function startRecording() {
-  stopAudio();
-  chrome.runtime.sendMessage({ type: 'MUTE_ALL_TABS' });
+  if (!('webkitSpeechRecognition' in window)) {
+    stateText.textContent = 'Error: Speech Recognition API not supported.';
+    return;
+  }
+
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
-    audioChunks = [];
+    logger.info('STT', 'Initializing native webkitSpeechRecognition');
+    recognition = new (window as any).webkitSpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
 
-    mediaRecorder.ondataavailable = (e) => {
-      if (e.data.size > 0) audioChunks.push(e.data);
+    let interimBubble: HTMLElement | null = null;
+
+    recognition.onstart = () => {
+      logger.info('STT', 'Speech recognition started');
+      isRecording = true;
+      interimBubble = null;
+      indicator.dataset.state = 'listening';
+      stateText.textContent = 'Listening...';
     };
 
-    mediaRecorder.onstop = async () => {
-      stream.getTracks().forEach(track => track.stop());
-      const blob = new Blob(audioChunks, { type: 'audio/webm' });
-      await processAudio(blob);
+    recognition.onresult = async (event: any) => {
+      let interimTranscript = '';
+      let finalTranscript = '';
+
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript;
+        } else {
+          interimTranscript += event.results[i][0].transcript;
+        }
+      }
+
+      if (interimTranscript) {
+        if (!interimBubble) {
+           interimBubble = appendLog('User', interimTranscript, true);
+        } else {
+           const body = interimBubble.querySelector('.message-body');
+           if (body) body.textContent = interimTranscript;
+           chatLog.scrollTop = chatLog.scrollHeight;
+        }
+      }
+
+      if (finalTranscript) {
+        if (interimBubble) {
+          interimBubble.remove();
+          interimBubble = null;
+        }
+        
+        logger.debug('STT', 'Speech recognition result received', { transcript: finalTranscript });
+        if (!finalTranscript.trim()) return;
+        appendLog('User', finalTranscript);
+        
+        indicator.dataset.state = 'processing';
+        stateText.textContent = 'Processing...';
+        
+        await agent.handleTranscript(finalTranscript);
+      }
     };
 
-    mediaRecorder.start();
-    isRecording = true;
-    indicator.dataset.state = 'listening';
-    stateText.textContent = 'Listening...';
+    recognition.onerror = (event: any) => {
+      if (event.error !== 'no-speech') {
+        logger.error('STT', 'Speech recognition error', event.error);
+        console.error('Speech recognition error', event.error);
+      }
+      
+      if (event.error === 'not-allowed') {
+        stateText.textContent = 'Mic denied. Opening options...';
+        chrome.runtime.openOptionsPage();
+      } else if (event.error === 'no-speech') {
+        // Just silently ignore no-speech and let onend handle the cleanup
+      } else {
+        stateText.textContent = `Error: ${event.error}`;
+      }
+      stopRecording();
+    };
+
+    recognition.onend = () => {
+      logger.debug('STT', 'Speech recognition ended');
+      if (isRecording) {
+         stopRecording();
+      }
+    };
+
+    recognition.start();
   } catch (err: any) {
+    logger.error('STT', 'Microphone access failed', err);
     console.error(err);
-    if (err.name === 'NotAllowedError' || err.message.includes('denied')) {
-      stateText.textContent = 'Mic denied. Opening options...';
-      chrome.runtime.openOptionsPage();
-    } else {
-      stateText.textContent = 'Error: Microphone access failed.';
-    }
+    stateText.textContent = 'Error: Microphone access failed.';
   }
 }
 
 function stopRecording() {
-  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-    mediaRecorder.stop();
+  if (recognition) {
+    recognition.stop();
+    recognition = null;
   }
   chrome.runtime.sendMessage({ type: 'UNMUTE_ALL_TABS' });
   isRecording = false;
@@ -341,31 +410,7 @@ function stopRecording() {
   stateText.textContent = 'Processing...';
 }
 
-async function processAudio(blob: Blob) {
-  if (!groqApiKey) {
-    stateText.textContent = 'Error: Missing API Key';
-    return;
-  }
-
-  try {
-    stateText.textContent = 'Transcribing...';
-    const transcript = await transcribeAudio(blob, groqApiKey);
-    
-    if (isSilenceHallucination(transcript)) {
-      stateText.textContent = 'Idle (Ignored silence)';
-      return;
-    }
-
-    appendLog('User', transcript);
-    await agent.handleTranscript(transcript);
-  } catch (err) {
-    console.error('Transcription failed:', err);
-    stateText.textContent = 'Error processing audio';
-  }
-}
-
 setTimeout(async () => {
-  if (!openRouterApiKey) return;
   try {
     const ctx = await agent.onGetContext?.();
     if (!ctx || !ctx.url || ctx.url.startsWith('chrome://')) return;
@@ -374,8 +419,7 @@ setTimeout(async () => {
       { role: 'system', content: sysPrompt },
       { role: 'user', content: `Current URL: ${ctx.url}\nPage Title: ${ctx.title}` }
     ];
-    const config = { model: selectedModel, openRouterApiKey, groqApiKey, rateLimitEnabled, rateLimitDurationMs };
-    const greeting = await callLLM(llmMessages, config, selectedModel, false);
+    const greeting = await callGemini(llmMessages, { geminiModel, geminiApiKey, rateLimitEnabled, rateLimitDurationMs, visionEnabled }, false);
     if (greeting) {
       agent.onSpeak?.(greeting);
     }

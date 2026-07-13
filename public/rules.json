@@ -1,0 +1,20 @@
+[
+  {
+    "id": 1,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "Origin",
+          "operation": "set",
+          "value": "chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold"
+        }
+      ]
+    },
+    "condition": {
+      "urlFilter": "*://speech.platform.bing.com/*",
+      "resourceTypes": ["websocket"]
+    }
+  }
+]

@@ -1,5 +1,5 @@
 // src/lib/classifying.ts
-import { callLLM, callZAI, callNVIDIA } from './litellm-client';
+import { callGemini } from './litellm-client';
 import type { LLMConfig } from './litellm-client';
 import type { BackgroundContext } from './system-prompt';
 import { buildBgCtxSummary } from './system-prompt';
@@ -77,33 +77,12 @@ export async function classifyTranscript(
 
   const prefix = isRetry ? "Return ONLY raw JSON. No backticks. No explanation.\n\n" : "";
 
-  let responseText: string;
-  if (config.nvidiaApiKey) {
-    responseText = await callNVIDIA(
-      [{ role: 'user', content: prefix + prompt }],
-      config.nvidiaApiKey,
-      'meta/llama-3.1-8b-instruct',
-      true,
-      signal
-    );
-  } else if (config.zaiApiKey) {
-    responseText = await callZAI(
-      [{ role: 'user', content: prefix + prompt }],
-      config.zaiApiKey,
-      'glm-4.7-flash',
-      true,
-      signal
-    );
-  } else {
-    responseText = await callLLM(
-      [{ role: 'user', content: prefix + prompt }],
-      config,
-      'meta-llama/llama-3.1-8b-instruct',
-      true,
-      signal,
-      'fast'
-    );
-  }
+  let responseText = await callGemini(
+    [{ role: 'user', content: prefix + prompt }],
+    config,
+    true,
+    signal
+  );
   
   try {
     const cleaned = responseText.replace(/```json/g, '').replace(/```/g, '').trim();

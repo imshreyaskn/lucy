@@ -12,6 +12,10 @@ chrome.commands.onCommand.addListener((command: string) => {
 
 let previouslyMutedTabIds = new Set<number>();
 
+chrome.tabs.onRemoved.addListener((tabId) => {
+  previouslyMutedTabIds.delete(tabId);
+});
+
 chrome.runtime.onMessage.addListener((message: any, _sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void) => {
   if (message.type === 'EXECUTE_BG_ACTION') {
     handleBgAction(message.action).then(sendResponse);

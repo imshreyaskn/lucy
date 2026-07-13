@@ -10,10 +10,23 @@
   },
   "devDependencies": {
     "@crxjs/vite-plugin": "^2.0.0-beta.33",
+    "@tailwindcss/postcss": "^4.3.2",
     "@types/chrome": "^0.1.43",
-    "sharp": "^0.34.5",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.3",
+    "autoprefixer": "^10.5.2",
+    "postcss": "^8.5.19",
+    "tailwindcss": "^4.3.2",
     "typescript": "~6.0.2",
     "vite": "^8.0.12"
   },
-  "dependencies": {}
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "framer-motion": "^12.42.2",
+    "lucide-react": "^1.24.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "tailwind-merge": "^3.6.0"
+  }
 }

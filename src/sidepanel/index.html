@@ -23,61 +23,53 @@
         </button>
       </div>
     </header>
-
     <section id="chat-log" aria-live="polite">
       <div id="welcome-card" class="message agent">
         <div class="message-header">Lucy</div>
         <div class="message-body">
-          Hi! I'm Lucy, your voice assistant. Press <strong>Alt+Shift+V</strong> or click the microphone below to start talking.
+          Hi! I'm Lucy, your voice assistant. Press <strong>Ctrl+Space</strong> or click the microphone below to start talking.
         </div>
       </div>
     </section>
-
-    <section id="debug-log" class="hidden" aria-live="polite">
+    <section id="debug-log" aria-live="polite">
     </section>
-
-    <section id="settings-view" class="hidden" aria-live="polite">
+    <section id="settings-view" aria-live="polite">
       <h2>Settings</h2>
       
       <div class="form-group">
-        <label for="llm-model">LLM Model</label>
-        <select id="llm-model">
-          <option value="meta-llama/llama-3.1-8b-instruct">Loading models...</option>
+        <label for="gemini-model">Gemini Model</label>
+        <select id="gemini-model">
+          <option value="gemini-3.1-flash-lite">gemini-3.1-flash-lite</option>
+          <option value="gemini-3.0-pro">gemini-3.0-pro</option>
         </select>
       </div>
-
-      <div class="form-group" id="openrouter-key-group">
-        <label for="openrouter-api-key">OpenRouter API Key</label>
-        <input type="password" id="openrouter-api-key" placeholder="sk-or-v1-...">
-      </div>
-
       <div class="form-group">
-        <label for="groq-api-key">Groq API Key (Voice STT/TTS)</label>
-        <input type="password" id="groq-api-key" placeholder="gsk_...">
+        <label for="gemini-api-key">Gemini API Key</label>
+        <input type="password" id="gemini-api-key" placeholder="AIzaSy...">
       </div>
-
+      <div class="form-group checkbox-group">
+        <input type="checkbox" id="vision-toggle">
+        <label for="vision-toggle">Enable Vision (Multimodal)</label>
+      </div>
       <div class="form-group checkbox-group">
         <input type="checkbox" id="rate-limit-toggle">
         <label for="rate-limit-toggle">Enable Rate Limiting (Delay)</label>
       </div>
-
       <div class="form-group" id="rate-limit-duration-group">
         <label for="rate-limit-duration">Rate Limit Duration (ms)</label>
         <input type="number" id="rate-limit-duration" value="2100" min="0" step="100">
       </div>
-
       <div class="settings-actions">
         <button id="save-settings-btn" class="primary-btn">Save Settings</button>
+        <button id="export-data-btn" class="secondary-btn">Export Data</button>
         <span id="save-status" class="status-msg"></span>
       </div>
     </section>
-
     <section id="status-panel" aria-live="polite">
       <div id="mic-indicator" data-state="idle"></div>
-      <p id="agent-state" class="state-pill">Idle (Alt+Shift+V)</p>
+      <p id="agent-state" class="state-pill">Idle (Ctrl+Space)</p>
     </section>
   </main>
-
   <script type="module" src="./sidepanel.ts"></script>
 </body>
 </html>

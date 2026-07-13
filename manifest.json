@@ -11,6 +11,7 @@
     "activeTab", "webNavigation", "commands"
   ],
   "host_permissions": ["<all_urls>"],
+
   "background": { "service_worker": "src/background/background.ts", "type": "module" },
   "side_panel": { "default_path": "src/sidepanel/index.html" },
   "options_ui": {
@@ -28,7 +29,7 @@
   }],
   "commands": {
     "toggle-listening": {
-      "suggested_key": { "default": "Alt+Shift+V" },
+      "suggested_key": { "default": "Ctrl+Space" },
       "description": "Push-to-talk: hold to speak"
     }
   }

@@ -1,5 +1,5 @@
 // src/lib/planning.ts
-import { callLLM, callZAI, callNVIDIA, callNVIDIAVision, callZAIVision, callLLMVision } from './litellm-client';
+import { callGemini, callGeminiVision } from './litellm-client';
 import type { LLMConfig } from './litellm-client';
 import type { BackgroundContext } from './system-prompt';
 import { buildBgCtxSummary } from './system-prompt';
@@ -11,7 +11,7 @@ export interface ActionDef {
   task_state_evaluation: string;
   is_goal_achieved: boolean;
   needs_screenshot?: boolean;
-  action: 'click' | 'type' | 'press_enter' | 'press_key' | 'scroll_down' | 'scroll_up' | 'navigate' | 'go_back' | 'wait' | 'done' | 'fail' | 'list_tabs' | 'switch_tab' | 'close_tab' | 'new_tab' | 'answer' | 'media';
+  action: 'click' | 'type' | 'press_enter' | 'press_key' | 'scroll_down' | 'scroll_up' | 'navigate' | 'go_back' | 'wait' | 'done' | 'fail' | 'list_tabs' | 'switch_tab' | 'close_tab' | 'new_tab' | 'answer' | 'media' | 'spawn_worker';
   target_id?: number;
   text?: string;
   submit?: boolean;
@@ -32,6 +32,7 @@ IMPORTANT: If the user asks you to search for something, prefer using a search b
 You can manage tabs using "list_tabs" (returns open tabs to your context), "switch_tab", "close_tab", and "new_tab".
 You can use the "press_key" action to press a global hotkey on the page (e.g., "Escape" to close popups).
 You can use the "media" action to natively control video/audio on the page. Set "text" to "play", "pause", "mute", or "unmute".
+You can use the "spawn_worker" action to delegate complex, multi-step subtasks (like researching, reading multiple pages, finding an answer) to a background worker. Set "text" to the detailed instruction for the worker. Only spawn workers for multi-step tasks; for simple DOM actions, execute them yourself.
 You can only see the markers provided. Do not hallucinate IDs.
 
 # Thinking Out Loud
@@ -64,9 +65,9 @@ Return ONLY valid JSON:
   "task_state_evaluation": "Analyze the execution history. Has the requested task already been successfully completed?",
   "is_goal_achieved": boolean,
   "needs_screenshot": boolean (Set true ONLY when visual inspection is necessary to proceed — e.g. verifying you landed on the right page, reading visible results or images, confirming UI state that is not captured in the semantic text. Set false for typing, navigating, or any step where DOM text is sufficient.),
-  "action": "click" | "type" | "press_enter" | "press_key" | "scroll_down" | "scroll_up" | "navigate" | "go_back" | "wait" | "done" | "fail" | "list_tabs" | "switch_tab" | "close_tab" | "new_tab" | "answer" | "media",
+  "action": "click" | "type" | "press_enter" | "press_key" | "scroll_down" | "scroll_up" | "navigate" | "go_back" | "wait" | "done" | "fail" | "list_tabs" | "switch_tab" | "close_tab" | "new_tab" | "answer" | "media" | "spawn_worker",
   "target_id": number (required for click, type),
-  "text": string (required for type, press_key, answer, media. For scroll_down/scroll_up, optionally provide "small", "medium", or "large"),
+  "text": string (required for type, press_key, answer, media, spawn_worker. For scroll_down/scroll_up, optionally provide "small", "medium", or "large"),
   "submit": boolean (optional. Set to true if you explicitly want to hit Enter and submit the form immediately after typing. Do not use for multi-field forms until the last field!),
   "url": string (required for navigate, new_tab),
   "tab_id": number (required for switch_tab, close_tab),
@@ -105,39 +106,12 @@ export async function determineNextAction(
   let responseText: string;
 
   if (screenshotBase64) {
-    if (config.nvidiaApiKey) {
-      logger.info('Planning', 'Vision re-plan: using NVIDIA llama-3.2-90b-vision with screenshot');
-      responseText = await callNVIDIAVision(prefix + prompt, screenshotBase64, config.nvidiaApiKey, true, signal);
-    } else if (config.zaiApiKey) {
-      logger.info('Planning', 'Vision re-plan: using ZAI glm-4v-flash with screenshot');
-      responseText = await callZAIVision(prefix + prompt, screenshotBase64, config.zaiApiKey, true, signal);
-    } else {
-      logger.info('Planning', 'Vision re-plan: using OpenRouter gemini-2.5-flash with screenshot');
-      responseText = await callLLMVision(prefix + prompt, screenshotBase64, config, true, signal);
-    }
-  } else if (config.nvidiaApiKey) {
-    responseText = await callNVIDIA(
-      [{ role: 'user', content: prefix + prompt }],
-      config.nvidiaApiKey,
-      'meta/llama-3.1-70b-instruct',
-      true,
-      signal
-    );
-  } else if (config.zaiApiKey) {
-    logger.warn('Planning', 'NVIDIA key not set, falling back to Z.ai');
-    responseText = await callZAI(
-      [{ role: 'user', content: prefix + prompt }],
-      config.zaiApiKey,
-      'glm-4.7-flash',
-      true,
-      signal
-    );
+    logger.info('Planning', 'Vision re-plan: using Gemini with screenshot');
+    responseText = await callGeminiVision(prefix + prompt, screenshotBase64, config, true, signal);
   } else {
-    logger.warn('Planning', 'No primary key set, falling back to OpenRouter');
-    responseText = await callLLM(
+    responseText = await callGemini(
       [{ role: 'user', content: prefix + prompt }],
       config,
-      'nvidia/llama-3.1-nemotron-70b-instruct',
       true,
       signal
     );

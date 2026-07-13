@@ -36,14 +36,7 @@ class AgentLogger {
       window.dispatchEvent(new CustomEvent('agent-log', { detail: entry }));
     }
 
-    // Sync to local dev logger if running
-    if (import.meta.env.DEV) {
-      fetch('http://localhost:18080/log', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(entry)
-      }).catch(() => {}); // silently fail if dev server is not running
-    }
+
   }
 
   info(component: string, message: string, data?: any) { this.log('info', component, message, data); }
