@@ -274,12 +274,7 @@ button#reset-btn:hover, button#debug-btn:hover, button#settings-btn:hover {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  background: rgba(0, 0, 0, 0.9);
-  @supports (backdrop-filter: blur(20px)) {
-    background: rgba(0, 0, 0, 0.75);
-  }
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: var(--bg-color);
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   font-family: 'Courier New', Courier, monospace;
   font-size: 11px;
@@ -318,12 +313,7 @@ button#reset-btn:hover, button#debug-btn:hover, button#settings-btn:hover {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  background: rgba(0, 0, 0, 0.9);
-  @supports (backdrop-filter: blur(20px)) {
-    background: rgba(0, 0, 0, 0.75);
-  }
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: var(--bg-color);
   border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 #settings-view.active {
