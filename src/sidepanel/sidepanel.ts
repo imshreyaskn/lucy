@@ -406,8 +406,11 @@ function stopRecording() {
   }
   chrome.runtime.sendMessage({ type: 'UNMUTE_ALL_TABS' });
   isRecording = false;
-  indicator.dataset.state = 'processing';
-  stateText.textContent = 'Processing...';
+  
+  if (indicator.dataset.state === 'listening') {
+    indicator.dataset.state = 'idle';
+    stateText.textContent = 'Idle (Ctrl+Space)';
+  }
 }
 
 setTimeout(async () => {
