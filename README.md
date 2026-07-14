@@ -3,11 +3,7 @@
   <h1>Lucy</h1>
   <p><b>Voice-first Browser Assistant</b></p>
   <p>An AI-powered browser assistant that helps users navigate the web using natural voice interaction.</p>
-  <p>
-    <a href="#">Live Demo</a> • 
-    <a href="#">Architecture</a> • 
-    <a href="#">Documentation</a>
-  </p>
+
 </div>
 
 ## Overview
