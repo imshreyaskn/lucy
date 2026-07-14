@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="public/icon.png" alt="Lucy Logo" width="120" />
+  <img src="./public/icon.png" alt="Lucy Logo" width="120" />
   <h1>Lucy</h1>
   <p><b>Voice-first Browser Assistant</b></p>
   <p>An AI-powered browser assistant that helps users navigate the web using natural voice interaction.</p>
