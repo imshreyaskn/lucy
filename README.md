@@ -36,20 +36,30 @@ I wanted to explore whether an AI agent could understand webpages, maintain conv
 
 ## Architecture
 
-```text
- Chrome Extension
-        │
-        ▼
-  State Machine
-        │
-        ▼
- Gemini 3.1 Flash
-        │
-        ▼
- DOM Manipulation
+```mermaid
+graph TD
+    User([User Voice]) -->|Audio| STT[Web Speech STT]
+    STT -->|Transcript| Agent[Agent Manager / State Machine]
+    
+    subgraph Browser Context
+        CS[Content Scripts] -->|DOM & Viewport| Agent
+        BG[Background Worker] -->|Tab Management| Agent
+    end
+    
+    Agent -->|State & History| UI[Sidepanel UI]
+    Agent -->|Context & Intent| LLM[Gemini 3.1 Flash]
+    LLM -->|Action Plans| Agent
+    
+    Agent -->|Execute Action| CS
+    Agent -->|Execute Action| BG
+    
+    Agent -->|Text Response| TTS[Web Speech TTS]
+    TTS -->|Audio| Spoken([User Hears Response])
 ```
 
-Lucy injects content scripts to extract DOM structure and viewport elements, uses Gemini to reason about the user's intent, and executes multi-step plans via a deterministic state machine.
+Lucy is built around a deterministic state machine that manages the flow between listening, thinking, planning, and executing. 
+
+When you speak, the native **Web Speech API** captures the audio and sends the transcript to the **Agent Manager**. The agent pulls the current page's context—using a lightweight "Set of Marks" DOM extraction in the **Content Script**—and passes it to **Gemini**. Gemini classifies your intent and streams back a step-by-step plan. The Agent Manager executes those actions directly on the DOM and reads out the final response using native browser **TTS**.
 
 ---
 
