@@ -1,70 +1,154 @@
-# Lucy: Voice AI Web Agent
+# Lucy
 
-Browse the internet entirely by voice. Built for accessibility.
+An AI-powered browser assistant that helps users navigate the web using natural voice interaction.
+
+[Live Demo] • [Architecture] • [Documentation]
+
+---
+
+──────────────────────────
+
+LUCY
+
+Voice-first Browser Assistant
+
+![Product Screenshot](/public/icon.png)
+
+──────────────────────────
 
 ## Overview
 
-Lucy is a Chrome extension that enables hands-free web browsing. By combining voice recognition with a multi-step agentic LLM architecture, it allows users to navigate, read content, interact with forms, and consume media using natural voice commands.
+Lucy enables users to browse websites using natural voice conversations. 
 
-## Architecture
+Instead of relying on traditional screen readers, the assistant understands page context, reasons about user intent, and performs actions directly in the browser.
 
-The extension uses a robust state machine to handle intent classification, planning, action execution, and DOM interaction.
+---
 
-* LLM Routing: All text-based AI reasoning routes through OpenRouter, eliminating the need for multiple cloud provider integrations. Users can select models dynamically via the UI.
-* Planning State: Hardcoded to use `meta-llama/llama-3.1-70b-instruct` (via OpenRouter) for complex multi-step planning and DOM parsing.
-* Classification & History: Uses `meta-llama/llama-3.1-8b-instruct` for fast intent classification and conversation memory compression.
-* Audio Processing: Uses Groq API for high-speed Speech-to-Text (`whisper-large-v3`) and Text-to-Speech generation.
-* DOM Parsing: Implements "Set-of-Marks" and TreeWalker semantics. To prevent context exhaustion, bounding logic only parses interactive elements currently visible within the viewport.
-* Context Awareness: Fetches user IP location to automatically localize search queries and domains.
-* Telemetry: Features an integrated logging system that streams real-time execution states for debugging.
+## Why I Built This
+
+Traditional accessibility tools focus on reading content.
+
+I wanted to explore whether an AI agent could understand webpages, maintain conversational context, and actively assist users instead of simply narrating interfaces.
+
+---
+
+## Demo
+
+![Demo GIF](#)
+
+![Screenshot 1](#)
+
+![Screenshot 2](#)
+
+![Screenshot 3](#)
+
+---
 
 ## Features
 
-* Voice-Controlled Browsing: Navigate pages, click links, and interact with elements using natural voice commands.
-* Push-to-Talk: Hold `Alt+Shift+V` to activate listening mode.
-* Resilient Execution: 12 execution states (e.g., CLASSIFYING, PLANNING, EXECUTING, RECOVERING) with automatic replanning on failure and built-in rate limit management.
-* Side Panel UI: A clean interface for real-time transcription, chat history, and configuration settings.
+- Natural voice interaction
+- Native browser speech recognition & synthesis
+- Autonomous browser automation (click, type, scroll, navigate)
+- Vision-enabled DOM understanding
+- Multi-step task execution
+- Context-aware intent classification
+- Apple-inspired glassmorphism UI
+
+---
+
+## Architecture
+
+```text
+ Chrome Extension
+        │
+        ▼
+  State Machine
+        │
+        ▼
+ Gemini 3.1 Flash
+        │
+        ▼
+ DOM Manipulation
+```
+
+Lucy injects content scripts to extract DOM structure and viewport elements, uses Gemini to reason about the user's intent, and executes multi-step plans via a deterministic state machine.
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+| --- | --- |
+| Extension | Chrome/Edge API, Manifest V3 |
+| Frontend | Vanilla TypeScript, CSS Glassmorphism |
+| AI | Gemini (3.1-flash-lite / 3.0-pro) |
+| Speech | Web Speech API (STT & TTS) |
+| Build | Vite, TypeScript |
+
+---
 
 ## Getting Started
 
-### Prerequisites
+```bash
+git clone https://github.com/imshreyaskn/lucy.git
 
-* Node.js (v16 or higher)
-* npm or yarn
+cd lucy/voice-agent-extension
 
-### Installation
+npm install
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/imshreyaskn/lucy.git
-   cd lucy/voice-agent-extension
-   ```
+npm run build
+```
 
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
+Then load the `dist` directory in your browser via `chrome://extensions` or `edge://extensions` (Developer Mode > Load Unpacked).
 
-3. Set up environment variables:
-   Create a `.env` file in the root directory and add your API keys:
-   ```env
-   VITE_OPENROUTER_API_KEY=your_openrouter_api_key
-   VITE_GROQ_API_KEY=your_groq_api_key
-   ```
-   Alternatively, you can input these keys directly into the extension's settings panel.
+---
 
-4. Run the development server:
-   ```bash
-   npm run dev
-   ```
+## Project Structure
 
-### Loading the Extension in Chrome
+```text
+src/
+├── background/
+├── content/
+├── lib/
+├── options/
+├── sidepanel/
+└── public/
+```
 
-1. Open Chrome and navigate to `chrome://extensions/`.
-2. Enable Developer mode.
-3. Click Load unpacked.
-4. Select the `dist` directory from the `voice-agent-extension` folder.
+---
+
+## Roadmap
+
+- [x] Voice Interaction
+- [x] Browser Automation
+- [x] Context Memory
+- [x] Vision Capabilities
+- [ ] Multi-Agent Collaboration
+- [ ] Offline Mode
+
+---
+
+## Lessons Learned
+
+Building this project taught me the importance of:
+
+- Agent orchestration
+- Deterministic state machines
+- Latency optimization
+- Prompt engineering for DOM interactions
+- User-centric accessibility
+
+---
+
+## Future Work
+
+- Add autonomous multi-step planning
+- Support Firefox / Safari
+- Persistent cross-session memory
+- Local LLM fallback
+
+---
 
 ## License
 
-This project is licensed under the MIT License.
+MIT
