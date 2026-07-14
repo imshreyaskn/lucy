@@ -1,20 +1,14 @@
-# Lucy
-
-An AI-powered browser assistant that helps users navigate the web using natural voice interaction.
-
-[Live Demo] • [Architecture] • [Documentation]
-
----
-
-──────────────────────────
-
-LUCY
-
-Voice-first Browser Assistant
-
-![Product Screenshot](/public/icon.png)
-
-──────────────────────────
+<div align="center">
+  <img src="public/icon.png" alt="Lucy Logo" width="120" />
+  <h1>Lucy</h1>
+  <p><b>Voice-first Browser Assistant</b></p>
+  <p>An AI-powered browser assistant that helps users navigate the web using natural voice interaction.</p>
+  <p>
+    <a href="#">Live Demo</a> • 
+    <a href="#">Architecture</a> • 
+    <a href="#">Documentation</a>
+  </p>
+</div>
 
 ## Overview
 
@@ -30,19 +24,7 @@ Traditional accessibility tools focus on reading content.
 
 I wanted to explore whether an AI agent could understand webpages, maintain conversational context, and actively assist users instead of simply narrating interfaces.
 
----
 
-## Demo
-
-![Demo GIF](#)
-
-![Screenshot 1](#)
-
-![Screenshot 2](#)
-
-![Screenshot 3](#)
-
----
 
 ## Features
 
