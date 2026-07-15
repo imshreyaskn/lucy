@@ -300,12 +300,12 @@ const closeModalBtn = document.getElementById('close-modal-btn');
 const retryBtn = document.getElementById('retry-download-btn');
 
 // Using the GitHub release URL directly
-const ZIP_URL = "https://github.com/imshreyaskn/lucy/releases/download/v1.0.0/lucy-v1.0.0.zip";
+const ZIP_URL = "https://github.com/imshreyaskn/lucy/releases/download/v1.0.1/lucy-v1.0.1.zip";
 
 function triggerDownload() {
   const a = document.createElement('a');
   a.href = ZIP_URL;
-  a.download = 'lucy-v1.0.0.zip';
+  a.download = 'lucy-v1.0.1.zip';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
