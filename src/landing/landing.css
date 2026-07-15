@@ -1015,11 +1015,25 @@ body::before {
   );
   background-size: 300% 300%;
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
+  color: transparent;
   animation: signature-shimmer 24s linear infinite;
-  
-  /* Native text-shadow for the white glow. 
-     This works perfectly with background-clip: text without causing Firefox/Safari GPU crashes! */
+}
+
+/* Chrome Bug Fix: Place the shadow on an identical pseudo-element underneath.
+   This prevents Chrome from accidentally painting the text-shadow OVER the transparent gradient fill! */
+.creator-name::after {
+  content: 'shreyas kn';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: inherit; /* Inherit the exact dynamic padding */
+  z-index: -1;
+  color: transparent;
+  pointer-events: none;
   text-shadow: 0 0 20px rgba(255, 255, 255, 0.6), 0 4px 12px rgba(255, 255, 255, 0.2);
 }
 
