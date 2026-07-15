@@ -187,10 +187,11 @@ header h1 {
 #chat-log {
   flex-grow: 1;
   overflow-y: auto;
-  padding: 0 4px;
+  overflow-x: hidden;
+  padding: 16px 24px; /* ponytail: add horizontal padding so massive glass shadows don't clip */
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
 }
 #chat-log::-webkit-scrollbar { width: 4px; }
 #chat-log::-webkit-scrollbar-track { background: transparent; }
@@ -249,20 +250,56 @@ header h1 {
   padding: 10px 16px;
   line-height: 1.5;
   color: var(--text-color);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: rgba(250, 250, 250, 0.18);
+  backdrop-filter: blur(8px) saturate(60%);
+  -webkit-backdrop-filter: blur(8px) saturate(60%);
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  border: none;
 }
+
+/* Glass Reflections */
+.message-body::before,
+.message-body::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+  border-radius: inherit;
+}
+
+.message-body::before {
+  /* Angled edge reflection */
+  background: linear-gradient(to left top, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0) 50%);
+}
+
+.message-body::after {
+  /* Subtle top-to-bottom sheen */
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0) 100%);
+}
+
 .message.user .message-body {
   border-radius: 22px 22px 4px 22px;
   background: rgba(255, 255, 255, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  box-shadow: 
+    -2px 6px 12px 0 rgba(51, 51, 51, 0.12),
+    inset 0px 0px 4px 2px rgba(245, 230, 235, 1),
+    0 0 30px rgba(250, 245, 240, 0.5),
+    0 0 30px rgba(227, 194, 200, 0.5);
 }
+
 .message.agent .message-body {
   border-radius: 22px 22px 22px 4px;
-  background: rgba(255, 255, 255, 0.25);
-  border: 1px solid rgba(203, 160, 166, 0.4);
-  box-shadow: 0 4px 12px rgba(203, 160, 166, 0.1), inset 0 0 15px rgba(203, 160, 166, 0.15);
+  box-shadow: 
+    -2px 6px 12px 0 rgba(51, 51, 51, 0.12),
+    inset 0px 0px 2px 1px rgba(235, 205, 215, 1),
+    inset 0 0 6px 3px rgba(203, 160, 166, 0.9),
+    inset 0 0 16px 2px rgba(203, 160, 166, 0.6);
 }
 
 details {
@@ -475,4 +512,5 @@ button#reset-btn:active, button#debug-btn:active, button#settings-btn:active {
   top: 8px;
   right: 8px;
 }
+
 
