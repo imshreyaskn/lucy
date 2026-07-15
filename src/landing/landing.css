@@ -1003,6 +1003,11 @@ body::before {
   position: relative;
   z-index: 2;
   
+  /* Safari Bug Fix: Force GPU layer and bounding box so it doesn't get culled on scroll */
+  display: inline-block;
+  transform: translateZ(0);
+  will-change: transform, filter;
+  
   /* Very Subtle Animated Gradient (Whitish Cyan & Rose Gold) */
   background: linear-gradient(
     -45deg, 
