@@ -29,7 +29,7 @@
   <!-- Fixed Bottom Actions -->
   <div class="fixed-bottom-actions" role="navigation" aria-label="Primary Actions">
     <a href="https://github.com/lucy-voice" class="btn btn-secondary" target="_blank" rel="noopener noreferrer">GitHub</a>
-    <a href="javascript:void(0)" class="btn btn-primary" role="button">Add to Chrome</a>
+    <a href="javascript:void(0)" id="download-btn" class="btn btn-primary" role="button">Add to Chrome</a>
   </div>
 
   <!-- Hero Section -->
@@ -282,6 +282,26 @@
 
   <!-- Toast Notification -->
   <div id="toast-message" class="toast" role="status" aria-live="polite">imshreyaskn@gmail.com copied to clipboard!</div>
+
+  <!-- Download Modal -->
+  <div id="download-modal" class="modal-overlay" aria-hidden="true">
+    <div class="modal-content glass-panel">
+      <button id="close-modal-btn" class="modal-close" aria-label="Close modal">&times;</button>
+      <h2 class="modal-title">Install Lucy</h2>
+      <p class="modal-desc">Your download should start automatically. Follow these steps to install Lucy via Developer Mode:</p>
+      
+      <ol class="install-steps">
+        <li>Extract the downloaded <code>lucy-v1.0.0.zip</code> file.</li>
+        <li>Open a new tab and go to <code>chrome://extensions/</code></li>
+        <li>Turn on <strong>Developer mode</strong> in the top right corner.</li>
+        <li>Click <strong>Load unpacked</strong> and select the extracted folder.</li>
+      </ol>
+
+      <div class="modal-actions">
+        <button id="retry-download-btn" class="btn btn-secondary">Retry Download</button>
+      </div>
+    </div>
+  </div>
 
   <script type="module" src="./landing.js"></script>
 </body>

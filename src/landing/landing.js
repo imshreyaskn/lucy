@@ -290,3 +290,52 @@ window.addEventListener('load', () => {
   }
 });
 window.addEventListener('resize', drawStateConnections);
+
+// ==========================================================================
+// Download Modal & Action
+// ==========================================================================
+const downloadBtn = document.getElementById('download-btn');
+const downloadModal = document.getElementById('download-modal');
+const closeModalBtn = document.getElementById('close-modal-btn');
+const retryBtn = document.getElementById('retry-download-btn');
+
+// Using the GitHub release URL directly
+const ZIP_URL = "https://github.com/imshreyaskn/lucy/releases/download/v1.0.0/lucy-v1.0.0.zip";
+
+function triggerDownload() {
+  const a = document.createElement('a');
+  a.href = ZIP_URL;
+  a.download = 'lucy-v1.0.0.zip';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+if (downloadBtn) {
+  downloadBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    downloadModal.classList.add('active');
+    triggerDownload();
+  });
+}
+
+if (closeModalBtn) {
+  closeModalBtn.addEventListener('click', () => {
+    downloadModal.classList.remove('active');
+  });
+}
+
+if (retryBtn) {
+  retryBtn.addEventListener('click', () => {
+    triggerDownload();
+  });
+}
+
+// Close on outside click
+if (downloadModal) {
+  downloadModal.addEventListener('click', (e) => {
+    if (e.target === downloadModal) {
+      downloadModal.classList.remove('active');
+    }
+  });
+}
