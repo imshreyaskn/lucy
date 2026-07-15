@@ -1004,11 +1004,29 @@ body::before {
   z-index: 2;
   display: inline-block;
   
-  /* Solid white text to permanently fix Safari/Firefox GPU culling bugs associated with background-clip: text */
-  color: #ffffff;
+  /* Restored Animated Gradient (Whitish Cyan & Rose Gold) */
+  background: linear-gradient(
+    -45deg, 
+    #ffffff 0%, 
+    #fdf4f6 25%, /* extremely faint rose */
+    #ffffff 50%, 
+    #f0fcff 75%, /* extremely faint cyan */
+    #ffffff 100%
+  );
+  background-size: 300% 300%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: signature-shimmer 24s linear infinite;
   
-  /* Native text-shadow for the white glow */
+  /* Native text-shadow for the white glow. 
+     This works perfectly with background-clip: text without causing Firefox/Safari GPU crashes! */
   text-shadow: 0 0 20px rgba(255, 255, 255, 0.6), 0 4px 12px rgba(255, 255, 255, 0.2);
+}
+
+@keyframes signature-shimmer {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 .social-links {
