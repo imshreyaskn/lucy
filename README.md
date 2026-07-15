@@ -3,7 +3,12 @@
   <h1>Lucy</h1>
   <p><b>Voice-first Browser Assistant</b></p>
   <p>An AI-powered browser assistant that helps users navigate the web using natural voice interaction.</p>
-
+  
+  <br />
+  <a href="https://lucyx.vercel.app/">
+    <img src="https://img.shields.io/badge/Landing_Page-lucyx.vercel.app-blue?style=for-the-badge&color=CBA0A6" alt="Landing Page" />
+  </a>
+  <br />
 </div>
 
 ## Overview
