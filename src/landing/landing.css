@@ -1,0 +1,1177 @@
+/* landing.css - World-Class Refactor */
+
+:root {
+  /* Core Colors */
+  --bg-start: #FAF5F0;
+  --bg-end: #E3C2C8;
+  --text-primary: #1a1a1a;
+  --text-muted: #52525b;
+  --accent-color: #CBA0A6;
+  
+  /* Glassmorphism */
+  --panel-bg: rgba(255, 255, 255, 0.4);
+  --glass-border: rgba(255, 255, 255, 0.5);
+  
+  /* Typography */
+  --font-sans: 'Inter', -apple-system, system-ui, sans-serif;
+  --font-cursive: 'Parisienne', cursive;
+  
+  /* Transitions & Animation */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-smooth: ease;
+  --transition-fast: 0.2s var(--ease-smooth);
+  --transition-normal: 0.4s var(--ease-smooth);
+  --transition-bouncy: 0.4s var(--ease-spring);
+}
+
+/* ==========================================================================
+   Base Styles
+   ========================================================================== */
+
+/* Scroll snapping removed due to jumpy trackpad/mousewheel behavior on varying-height layouts */
+
+html, body {
+  overscroll-behavior: none;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: linear-gradient(to bottom right, var(--bg-start), var(--bg-end));
+  background-attachment: fixed;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  min-height: 100vh;
+  overflow-x: hidden;
+  position: relative;
+  -webkit-font-smoothing: antialiased; /* Crisp typography rendering */
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Global Noise Texture */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.5' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.3;
+  mix-blend-mode: overlay;
+}
+
+/* ==========================================================================
+   Layout Components
+   ========================================================================== */
+
+/* Fixed Bottom Actions container */
+.fixed-bottom-actions {
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  transition: transform 0.5s var(--ease-spring), opacity var(--transition-normal);
+}
+
+.fixed-bottom-actions.hidden-actions {
+  transform: translateX(-50%) translateY(100px);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ==========================================================================
+   Buttons & Glassmorphism
+   ========================================================================== */
+
+.btn {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 1rem;
+  /* Premium spring easing for micro-interactions */
+  transition: transform var(--transition-bouncy), box-shadow var(--transition-normal), background var(--transition-normal);
+  position: relative;
+  z-index: 1;
+  background: rgba(250, 250, 250, 0.18);
+  backdrop-filter: blur(8px) saturate(60%);
+  -webkit-backdrop-filter: blur(8px) saturate(60%);
+  color: var(--text-primary);
+  border-radius: 40px;
+  overflow: hidden;
+  cursor: pointer;
+  outline: none; /* Removed default outline for custom focus-visible */
+  white-space: nowrap; /* Prevent text from wrapping on narrow mobile screens */
+}
+
+/* Glass Reflections */
+.btn::before,
+.btn::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.btn::before {
+  /* Angled edge reflection */
+  background: linear-gradient(to left top, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0) 50%);
+}
+
+.btn::after {
+  /* Subtle top-to-bottom sheen */
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0) 100%);
+}
+
+/* Interactive States */
+.btn:hover {
+  background: rgba(250, 250, 250, 0.25);
+  transform: translateY(-2px) scale(1.02); /* Slight organic scale */
+}
+
+.btn:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+.btn:focus-visible {
+  box-shadow: 0 0 0 4px rgba(203, 160, 166, 0.4); /* Accessible keyboard focus */
+}
+
+/* Secondary Button Styles */
+.btn-secondary {
+  box-shadow: 
+    -4px 12px 20px 0 rgba(51, 51, 51, 0.22),
+    inset 0px 0px 4px 2px rgba(245, 230, 235, 1),
+    0 0 70px rgba(250, 245, 240, 0.7),
+    0 0 70px rgba(227, 194, 200, 0.7);
+}
+
+/* Primary Button Styles (Rose Gold Tinted) */
+.btn-primary {
+  box-shadow: 
+    -4px 12px 20px 0 rgba(51, 51, 51, 0.22),
+    inset 0px 0px 2px 1px rgba(235, 205, 215, 1),
+    inset 0 0 6px 3px rgba(203, 160, 166, 1),
+    inset 0 0 16px 2px rgba(203, 160, 166, 0.8);
+}
+
+/* ==========================================================================
+   Hero Section
+   ========================================================================== */
+
+.hero {
+  width: 100%;
+  max-width: 1200px;
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 0 40px; /* Standardized side margin */
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 80px;
+  position: relative;
+  z-index: 10;
+}
+
+.hero-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  align-items: center;
+}
+
+.hero-left {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 24px;
+  text-align: left;
+}
+
+.hero-right {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  width: 100%;
+}
+
+.shell-logo {
+  width: 100%;
+  max-width: 340px;
+  height: auto;
+  filter: drop-shadow(0 16px 32px rgba(0,0,0,0.15));
+  animation: float 10s infinite ease-in-out alternate;
+  will-change: transform, filter; /* Hardware acceleration for smooth painting */
+}
+
+/* Typography */
+.hero-title {
+  font-size: 6rem;
+  font-weight: 400;
+  margin: 0;
+  line-height: 1.1;
+  font-family: 'Parisienne', cursive;
+  color: var(--text-color);
+}
+
+.hero-title span {
+  font-family: 'Parisienne', cursive;
+  color: var(--text-muted);
+}
+
+.hero-subtitle {
+  font-size: 1.25rem;
+  color: var(--text-muted);
+  max-width: 500px;
+  margin: 0;
+  line-height: 1.5;
+  font-style: italic;
+}
+
+/* ==========================================================================
+   Orb Section
+   ========================================================================== */
+
+.orb-section {
+  width: 100%;
+  max-width: 1200px;
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 120px 40px; /* Standardized top/bottom and side margins */
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  z-index: 10;
+  perspective: 1000px;
+  gap: 140px; /* Increased gap to push chats further from orb */
+}
+
+/* ==========================================================================
+   Orb Chat Bubbles
+   ========================================================================== */
+
+.chat-group {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  width: 400px; /* Widened to increase horizontal staggering between messages */
+  position: relative;
+  z-index: 15;
+  animation: float 12s infinite ease-in-out alternate;
+}
+
+.chat-group:nth-child(3) {
+  animation-delay: -6s; /* Offset the right side */
+}
+
+.chat-bubble {
+  max-width: 280px;
+  padding: 16px 24px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--text-color);
+  font-weight: 500;
+  
+  /* Inherit the github pill base glass style */
+  background: rgba(250, 250, 250, 0.18);
+  backdrop-filter: blur(8px) saturate(60%);
+  -webkit-backdrop-filter: blur(8px) saturate(60%);
+  
+  /* GitHub pill shadow exactly */
+  box-shadow: 
+    -4px 12px 20px 0 rgba(51, 51, 51, 0.22),
+    inset 0px 0px 4px 2px rgba(245, 230, 235, 1),
+    0 0 70px rgba(250, 245, 240, 0.7),
+    0 0 70px rgba(227, 194, 200, 0.7);
+    
+  position: relative;
+  overflow: hidden;
+}
+
+/* Glass Reflections exactly like buttons */
+.chat-bubble::before,
+.chat-bubble::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 2;
+  border-radius: inherit;
+}
+.chat-bubble::before { background: linear-gradient(to left top, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0) 50%); }
+.chat-bubble::after { background: linear-gradient(to bottom, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0) 100%); }
+
+.message-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px; /* space between tag and bubble */
+}
+
+.user-message {
+  align-self: flex-end;
+  align-items: flex-end; /* right-align the tag */
+}
+
+.agent-message {
+  align-self: flex-start;
+  align-items: flex-start; /* left-align the tag */
+}
+
+.chat-tag {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-color);
+  opacity: 0.6;
+  margin: 0 16px; /* visually align with text inside bubble */
+}
+
+.agent-message .chat-tag {
+  color: #CBA0A6; /* Rose Gold */
+  opacity: 1;
+}
+
+.user-bubble {
+  /* sidepanel user shape */
+  border-radius: 22px 22px 4px 22px;
+}
+
+.agent-bubble {
+  /* sidepanel agent shape */
+  border-radius: 22px 22px 22px 4px;
+}
+
+.orb-wrapper {
+  position: relative;
+  /* Shift the entire wrapper slightly towards the mouse */
+  transform: 
+    translate(var(--mouse-x, 0px), var(--mouse-y, 0px)) 
+    scale(calc(1 + (var(--proximity, 0) * 0.05)));
+  transition: transform 0.1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  will-change: transform;
+}
+
+.large-orb {
+  width: 160px;
+  height: 160px;
+  margin: 0;
+  border-radius: 50%;
+  position: relative;
+  
+  /* Outer glow intensifies dynamically as the mouse gets closer */
+  box-shadow: 
+    0 16px 48px rgba(227, 194, 200, calc(0.4 + var(--proximity, 0) * 0.4)),
+    0 0 80px rgba(203, 160, 166, calc(0.2 + var(--proximity, 0) * 0.3));
+
+  /* Liquid morphing only */
+  animation: morph 8s ease-in-out infinite;
+    
+  will-change: border-radius, box-shadow, transform;
+  overflow: hidden; /* Clips the plasma inside */
+  /* Hardware acceleration hack to fix Safari clipping bug */
+  -webkit-mask-image: -webkit-radial-gradient(white, black);
+}
+
+/* Frosted glass shell (covers the plasma) */
+.orb-glass {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  border-radius: inherit; /* Inherits the morphing shape exactly! */
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.05); 
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 
+    inset 0 0 20px rgba(255, 255, 255, 0.35),
+    inset 0 0 8px rgba(255, 255, 255, 0.5);
+  z-index: 10;
+}
+
+/* Internal Swirling Plasma */
+.plasma {
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  pointer-events: none;
+  border-radius: 40% 60% 50% 50%;
+  /* Use independent CSS translate property so running keyframes don't overwrite it */
+  translate: calc(var(--mouse-x, 0px) * var(--shift-mult)) calc(var(--mouse-y, 0px) * var(--shift-mult));
+  transition: translate 0.1s ease-out;
+}
+
+.plasma-1 {
+  --shift-mult: 0.5;
+  background: radial-gradient(circle at 35% 35%, rgba(135, 206, 235, 0.75), transparent 60%);
+  animation: swirl 10s linear infinite;
+}
+
+.plasma-2 {
+  --shift-mult: 0.8;
+  background: radial-gradient(circle at 65% 65%, rgba(227, 194, 200, 0.85), transparent 60%); 
+  animation: swirl-reverse 12s linear infinite;
+}
+
+.plasma-3 {
+  --shift-mult: 1.5; /* Shifts violently for deep parallax */
+  /* Core highlight */
+  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.5), transparent 30%);
+  animation: swirl 6s ease-in-out infinite alternate;
+}
+
+/* ==========================================================================
+   Animations
+   ========================================================================== */
+
+@keyframes float {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-20px); }
+}
+
+/* Organic liquid morphing */
+@keyframes morph {
+  0% { border-radius: 50%; }
+  25% { border-radius: 45% 55% 40% 60% / 55% 45% 60% 40%; }
+  50% { border-radius: 60% 40% 55% 45% / 40% 60% 45% 55%; }
+  75% { border-radius: 40% 60% 45% 55% / 60% 40% 55% 45%; }
+  100% { border-radius: 50%; }
+}
+
+/* 
+  Swirl animations using independent rotate/scale properties!
+  This allows the translate property to handle mouse parallax without conflict.
+*/
+@keyframes swirl {
+  0% { rotate: 0deg; scale: 1; }
+  50% { rotate: 180deg; scale: 1.1; }
+  100% { rotate: 360deg; scale: 1; }
+}
+
+@keyframes swirl-reverse {
+  0% { rotate: 360deg; scale: 1.1; }
+  50% { rotate: 180deg; scale: 1; }
+  100% { rotate: 0deg; scale: 1.1; }
+}
+
+/* ==========================================================================
+   Media Queries
+   ========================================================================== */
+
+@media (max-width: 768px) {
+  .hero-layout { 
+    grid-template-columns: 1fr; 
+    text-align: center; 
+  }
+  
+  .hero-left { 
+    align-items: center; 
+    text-align: center; 
+  }
+  
+  .hero-right { 
+    justify-content: center; 
+  }
+  
+  .hero-title { 
+    font-size: 4rem; 
+  }
+  
+  .fixed-bottom-actions { 
+    bottom: 24px; 
+    gap: 12px; 
+  }
+  
+  .btn {
+    padding: 10px 18px; /* Slightly tighter padding to fit narrow screens */
+    font-size: 0.9rem; /* Scale down text slightly */
+  }
+
+  .orb-section {
+    flex-direction: column;
+    gap: 40px;
+  }
+  
+  .user-bubble {
+    align-self: flex-start;
+  }
+  
+  .agent-bubble {
+    align-self: flex-end;
+  }
+}
+
+.hero {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  box-sizing: border-box;
+  scroll-snap-align: start; /* Snap to top */
+}
+
+/* ==========================================================================
+   Architecture Section (Bento Grid)
+   ========================================================================== */
+
+.architecture-section {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 120px 40px 60px 40px; /* Reduced vertical padding to shrink overall section height */
+  box-sizing: border-box;
+  position: relative;
+  z-index: 10;
+  gap: 140px; /* Increased massively to push the flow diagram away from the header */
+  scroll-snap-align: start; /* Snap to top */
+}
+
+.section-header {
+  text-align: center;
+}
+
+.section-header h2 {
+  font-size: 2.2rem;
+  font-weight: 500;
+  margin: 0; /* Removed bottom margin completely */
+  background: linear-gradient(135deg, #333333 0%, #888888 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: -0.02em;
+}
+
+.lucy-brand {
+  font-family: 'Parisienne', cursive;
+  font-size: 2.2em; /* Compensate for the smaller base size so Lucy stays large */
+  font-weight: normal;
+  padding-right: 4px;
+}
+
+.section-header p {
+  font-size: 1.1rem;
+  color: var(--text-color);
+  opacity: 0.7;
+  max-width: 500px;
+  margin: -8px auto 0 auto; /* Negative top margin to tuck it tightly under the cursive text */
+  line-height: 1.6;
+}
+
+.flow-horizontal {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  gap: 16px;
+}
+
+.flow-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  flex: 1;
+  max-width: 200px;
+  position: relative;
+  z-index: 5;
+}
+
+.glass-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px; /* Pulled up labels for space */
+  color: var(--text-color);
+  
+  /* The exact glass styling transferred from the cards */
+  background: rgba(250, 250, 250, 0.18);
+  backdrop-filter: blur(8px) saturate(60%);
+  -webkit-backdrop-filter: blur(8px) saturate(60%);
+  box-shadow: 
+    -4px 12px 20px 0 rgba(51, 51, 51, 0.22),
+    inset 0px 0px 4px 2px rgba(245, 230, 235, 1),
+    0 0 40px rgba(250, 245, 240, 0.7),
+    0 0 40px rgba(227, 194, 200, 0.7);
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.flow-node:hover .glass-icon {
+  transform: translateY(-5px) scale(1.05);
+}
+
+/* Glass Reflections */
+.glass-icon::before,
+.glass-icon::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 2;
+  border-radius: inherit;
+}
+.glass-icon::before { background: linear-gradient(to left top, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0) 50%); }
+.glass-icon::after { background: linear-gradient(to bottom, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0) 100%); }
+
+.glass-icon svg {
+  position: relative;
+  z-index: 5;
+  width: 32px;
+  height: 32px;
+}
+
+.flow-node h3 {
+  font-size: 1.1rem;
+  margin: 0; /* Removed bottom margin since description is gone */
+  color: var(--text-color);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  white-space: nowrap; /* Prevents 2nd and 5th node text from wrapping */
+}
+
+.flow-node p {
+  font-size: 0.85rem;
+  margin: 0;
+  color: var(--text-color);
+  opacity: 0.75;
+  line-height: 1.5;
+  font-weight: 500;
+}
+
+.flow-arrow {
+  flex: 1; /* stretches to fill space between nodes */
+  height: 80px; /* matches icon height for perfect horizontal alignment */
+  margin-top: 0; 
+  position: relative;
+  z-index: 1;
+}
+
+.arrow-path {
+  stroke: rgba(255, 255, 255, 0.15);
+  stroke-width: 2;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke; /* prevents stretching distortion */
+}
+
+.arrow-pulse {
+  stroke: rgba(227, 194, 200, 1); /* Rose Gold */
+  stroke-width: 3;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  animation: dash 2s linear infinite;
+  /* Adds a stunning glow to the data pulse */
+  filter: drop-shadow(0 0 8px rgba(227, 194, 200, 0.8));
+}
+
+@keyframes dash {
+  0% { stroke-dashoffset: 100; }
+  100% { stroke-dashoffset: -100; }
+}
+
+@media (max-width: 900px) {
+  .flow-horizontal {
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+  .flow-node {
+    margin-bottom: 0;
+    max-width: 300px;
+  }
+  
+  /* Scale down the entire state visualization */
+  .glass-icon {
+    width: 50px;
+    height: 50px;
+    margin-bottom: 4px;
+  }
+  .glass-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+  .flow-node h3 {
+    font-size: 0.9rem;
+  }
+  
+  /* Shorten the connecting lines to compress the column */
+  .flow-arrow {
+    width: 4px;
+    height: 30px;
+    transform: none; /* Reset rotation */
+    margin: 8px 0;
+    flex: none;
+  }
+  
+  /* Hide the complex swoosh and replace with a straight dashed line */
+  .arrow-path {
+    display: none; 
+  }
+  .arrow-pulse {
+    d: path("M 50 0 L 50 100"); /* Draw exactly down the middle of the 0 0 100 100 viewBox */
+    stroke-dasharray: 4 8;
+    stroke-dashoffset: 0;
+    animation: sm-flow 2s linear infinite; /* Reuse the state machine dash animation */
+  }
+}
+
+/* ==========================================================================
+   State Machine Technical Diagram
+   ========================================================================== */
+
+.technical-arch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 120px 40px; /* Standardized top/bottom and side margins */
+  box-sizing: border-box;
+  position: relative;
+  z-index: 10;
+  scroll-snap-align: start;
+}
+
+.technical-arch .section-header h2 {
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 2.5rem;
+  background: none;
+  -webkit-text-fill-color: var(--text-color);
+}
+
+.state-machine-container {
+  position: relative;
+  width: 100%;
+  padding: 60px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 100px; /* Increased from 60px for more breathing room */
+  align-items: center;
+}
+
+#sm-canvas {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.sm-row {
+  display: flex;
+  gap: 40px;
+  justify-content: center;
+  position: relative;
+  z-index: 5;
+  width: 100%;
+}
+
+.sm-node-group {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.ext-node {
+  padding: 16px 24px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-align: center;
+  border-radius: 20px;
+  min-width: 180px;
+  position: relative;
+  z-index: 15;
+  cursor: default;
+  transition: transform 0.2s;
+  
+  /* Subtle Cyan-Tinted Glass Pill (matching classifying state logic) */
+  backdrop-filter: blur(8px) saturate(60%);
+  -webkit-backdrop-filter: blur(8px) saturate(60%);
+  color: var(--text-color);
+  
+  background: rgba(180, 230, 240, 0.3);
+  border: 1px solid rgba(180, 230, 240, 0.4);
+  box-shadow: 
+    0 0 30px rgba(180, 230, 240, 0.2),
+    inset 0 0 4px 1px rgba(255,255,255,0.8);
+}
+
+.ext-node:hover {
+  transform: scale(1.05);
+}
+
+.sm-branches {
+  display: flex;
+  gap: 120px;
+  width: 100%;
+  justify-content: center;
+  position: relative;
+  z-index: 5;
+}
+
+.sm-branch {
+  display: flex;
+  flex-direction: column;
+  gap: 60px; /* Increased from 40px */
+  align-items: center;
+  background: rgba(250, 250, 250, 0.1);
+  padding: 40px 24px;
+  border-radius: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  width: 100%;
+  max-width: 320px;
+}
+
+.branch-title {
+  margin: 0 0 16px 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  opacity: 0.6;
+}
+
+.sm-node {
+  padding: 16px 24px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-align: center;
+  border-radius: 20px;
+  min-width: 180px;
+  transition: transform 0.2s;
+  cursor: default;
+  position: relative;
+  z-index: 10;
+  
+  /* Glass pill style */
+  background: rgba(250, 250, 250, 0.25);
+  backdrop-filter: blur(8px) saturate(60%);
+  -webkit-backdrop-filter: blur(8px) saturate(60%);
+  box-shadow: 
+    0 4px 12px rgba(0,0,0,0.05), 
+    inset 0 0 4px 1px rgba(255,255,255,0.8);
+}
+.sm-node:hover {
+  transform: scale(1.05);
+}
+
+.sm-primary {
+  background: rgba(227, 194, 200, 0.4);
+  border: 1px solid rgba(227, 194, 200, 0.5);
+  box-shadow: 
+    0 0 30px rgba(227, 194, 200, 0.3),
+    inset 0 0 4px 1px rgba(255,255,255,0.8);
+}
+
+/* SVG Connecting Lines */
+.sm-connection {
+  stroke: rgba(255, 255, 255, 0.3);
+  stroke-width: 2;
+  fill: none;
+  stroke-linecap: round;
+}
+
+.sm-connection-pulse {
+  stroke: rgba(227, 194, 200, 1);
+  stroke-width: 3;
+  fill: none;
+  stroke-linecap: round;
+  stroke-dasharray: 10 30; /* Beautiful dotted flowing line */
+  animation: sm-flow 1s linear infinite;
+  filter: drop-shadow(0 0 6px rgba(227, 194, 200, 0.8));
+}
+
+/* Hover Interaction States */
+#sm-canvas path {
+  transition: opacity 0.4s ease;
+}
+
+#sm-canvas path.dimmed {
+  opacity: 0.05 !important;
+}
+
+.sm-connection.highlighted {
+  opacity: 0.5 !important; /* Brighter track when highlighted */
+}
+
+.sm-connection-error {
+  stroke: rgba(255, 100, 100, 0.3);
+  stroke-width: 1.5;
+  fill: none;
+  stroke-dasharray: 4 12;
+  animation: sm-flow 4s linear infinite;
+}
+
+@keyframes sm-flow {
+  to { stroke-dashoffset: -40; }
+}
+
+/* Removed legacy column-stacking media query to allow horizontal panning on mobile */
+
+/* ==========================================================================
+   Footer
+   ========================================================================== */
+
+.landing-footer {
+  width: 100%;
+  padding: 40px 40px;
+  background: transparent;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  box-sizing: border-box;
+  scroll-snap-align: end; /* Snap to bottom so it reveals fully */
+}
+
+.glow-divider {
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 10%, rgba(255, 255, 255, 0.8) 50%, transparent 90%);
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.6), 0 0 30px rgba(255, 255, 255, 0.2);
+  margin: 40px 0 0 0;
+  opacity: 0.8;
+}
+
+.footer-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between; /* Splits left and right */
+  align-items: flex-end; /* Aligns the bottom of the name with the socials */
+  flex-wrap: wrap; /* Graceful degradation on mobile */
+  gap: 40px;
+}
+
+.footer-left {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start; /* Left aligns text */
+}
+
+.footer-right {
+  display: flex;
+  align-items: center;
+  padding-bottom: 24px; /* Slight bump up to align visually with the core mass of the signature */
+}
+
+.footer-desc {
+  font-size: 0.65rem; /* Smaller text size per request */
+  color: var(--text-muted);
+  margin: 0 0 0 4px; /* Slight left margin to align the straight text with the sweeping start of the cursive 's' */
+  line-height: 1.5;
+  font-style: italic; /* Matching hero desc */
+  text-align: left;
+}
+
+.creator-name {
+  font-size: 4rem; /* Scaled down signature */
+  line-height: 1.2; /* Restored to prevent background-clip from clipping ascenders/descenders */
+  padding: 0.25em 0.4em 0.625em 0.3125em; /* Dynamic padding (scales perfectly based on font-size) to prevent clipping */
+  margin: -0.55em 0 -0.625em -0.3125em; /* Dynamic margins (-0.55em = exactly -35.2px at 4rem) so overlap is always mathematically perfect */
+  position: relative;
+  z-index: 2;
+  
+  /* Very Subtle Animated Gradient (Whitish Cyan & Rose Gold) */
+  background: linear-gradient(
+    -45deg, 
+    #ffffff 0%, 
+    #fdf4f6 25%, /* extremely faint rose */
+    #ffffff 50%, 
+    #f0fcff 75%, /* extremely faint cyan */
+    #ffffff 100%
+  );
+  background-size: 300% 300%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: signature-shimmer 24s linear infinite;
+  
+  /* Mimic the old double text-shadow using chained drop-shadows to support the clipped gradient */
+  filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.6)) drop-shadow(0 4px 12px rgba(255, 255, 255, 0.2));
+}
+
+@keyframes signature-shimmer {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.social-links {
+  display: flex;
+  gap: 16px;
+}
+
+.social-links a {
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  border-radius: 50%; /* Circle icon buttons */
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  backdrop-filter: blur(4px);
+}
+
+.social-links a:hover {
+  color: var(--text-color);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-4px) scale(1.05);
+}
+
+/* ==========================================================================
+   Toast Notification
+   ========================================================================== */
+
+.toast {
+  position: fixed;
+  bottom: -60px; /* Hidden state */
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.1); /* Matches social hover */
+  backdrop-filter: blur(12px) saturate(120%);
+  -webkit-backdrop-filter: blur(12px) saturate(120%);
+  color: var(--text-color); /* Matches social hover */
+  padding: 12px 24px;
+  border-radius: 30px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  border: 1px solid rgba(255, 255, 255, 0.2); /* Matches social hover */
+  box-shadow: none; /* Shadow removed per user request */
+  z-index: 1000;
+  transition: bottom 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.4s ease;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.toast.show {
+  bottom: 40px; /* Visible state */
+  opacity: 1;
+}
+
+/* ==========================================================================
+   Tablet Overrides (Swipe, Panning, and Stacking)
+   ========================================================================== */
+@media (max-width: 1024px) {
+  /* Orb Chat Groups (Stack vertically on tablets since 1200px width overflows) */
+  .orb-section {
+    flex-direction: column;
+    gap: 40px;
+  }
+  
+  .chat-group {
+    width: 100%;
+    max-width: 100%;
+    animation: none; /* Disable horizontal float to prevent overflow */
+  }
+  
+  .chat-bubble {
+    max-width: 90%;
+  }
+  
+  .user-bubble {
+    align-self: flex-start;
+  }
+  
+  .agent-bubble {
+    align-self: flex-end;
+  }
+
+  /* State Machine Panning Container */
+  .technical-arch {
+    padding: 60px 0; /* Remove side padding to allow edge-to-edge scrolling */
+    width: 100%;
+    overflow-x: auto; /* This is the horizontal scrolling window */
+    overflow-y: hidden; /* CRITICAL: Prevent iOS Safari from trapping vertical swipes inside this container! */
+    -webkit-overflow-scrolling: touch;
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+    align-items: flex-start; /* CRITICAL: Prevent flex-center from distributing overflow to the left, which permanently clips the scroll window */
+  }
+  
+  /* Hide the scrollbar for an elegant aesthetic */
+  .technical-arch::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .state-machine-container {
+    padding: 60px 40px; 
+    align-items: flex-start; /* Prevent flex-center from truncating the left edge on overflow */
+    min-width: 900px; /* Force the inner content to stay wide so the parent scrolls */
+  }
+}
+
+/* ==========================================================================
+   Mobile Overrides (Footer & Header Scaling)
+   ========================================================================== */
+@media (max-width: 768px) {
+  
+  /* Footer Stacking */
+  .landing-footer {
+    padding: 40px 24px;
+  }
+  
+  .footer-content {
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    text-align: center;
+  }
+  
+  .footer-left {
+    align-items: center;
+  }
+  
+  .footer-desc {
+    margin: 0;
+    text-align: center;
+  }
+  
+  .creator-name {
+    font-size: 3rem;
+    margin-left: 0; /* Reset the negative left-alignment offset for perfect centering on mobile */
+  }
+  
+  /* Architecture Header */
+  .section-header h2 {
+    font-size: 1.5rem; /* Scale down base font size so 'Lucy' scales proportionally */
+    white-space: nowrap; /* Prevent wrapping on narrow screens */
+  }
+  
+  .footer-right {
+    padding-bottom: 0;
+  }
+}

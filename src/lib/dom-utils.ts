@@ -47,6 +47,11 @@ export function fillInput(element: HTMLInputElement | HTMLTextAreaElement, value
   element.focus();
   element.select();
   
+  // ponytail: force Monaco/CodeMirror to select all existing boilerplate so it gets overwritten
+  element.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', code: 'KeyA', ctrlKey: true, bubbles: true }));
+  element.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', code: 'KeyA', metaKey: true, bubbles: true }));
+  document.execCommand('selectAll', false, undefined);
+  
   // Try execCommand first for realistic keystrokes
   const success = document.execCommand('insertText', false, value);
   

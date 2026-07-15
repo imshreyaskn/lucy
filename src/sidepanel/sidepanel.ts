@@ -5,11 +5,13 @@ import { logger } from '../lib/logger';
 import { speakText, stopAudio } from '../lib/speaker';
 import { callGemini } from '../lib/litellm-client';
 import { fetchUserLocation } from '../lib/ip-location';
+import SiriWave from 'siriwave';
 
 let isRecording = false;
 let recognition: any = null;
 let geminiModel = 'gemini-3.1-flash-lite';
 let geminiApiKey = '';
+let groqApiKey = '';
 let visionEnabled = true;
 
 const indicator = document.getElementById('mic-indicator')!;
@@ -21,8 +23,77 @@ const debugBtn = document.getElementById('debug-btn')!;
 const settingsBtn = document.getElementById('settings-btn')!;
 const settingsView = document.getElementById('settings-view')!;
 
+let siriWave: any = null;
+let audioContext: AudioContext | null = null;
+let analyser: AnalyserNode | null = null;
+let mediaStream: MediaStream | null = null;
+let mediaRecorder: MediaRecorder | null = null;
+let audioChunks: Blob[] = [];
+
+setTimeout(() => {
+  siriWave = new SiriWave({
+    container: document.getElementById('siri-wave-mount')!,
+    width: 70,
+    height: 90,
+    style: 'ios9',
+    speed: 0.08,
+    amplitude: 0.5,
+    frequency: 6,
+    color: '#ffffff', // Clean white wave inside the colorful mesh
+    autostart: true
+  });
+}, 100);
+
+let waveTargetAmp = 0.5;
+let waveTargetSpeed = 0.08;
+let currentScale = 1; // ponytail: lerp scale in JS so it doesn't jitter the CSS transition
+
+const waveLoop = () => {
+  if (siriWave) {
+    const state = indicator.dataset.state || 'idle';
+    let targetScale = 1;
+    
+    if (state === 'idle') {
+      waveTargetAmp = 0.5;
+      waveTargetSpeed = 0.08;
+      targetScale = 1;
+    } else if (state === 'listening' && analyser) {
+      const dataArray = new Uint8Array(analyser.frequencyBinCount);
+      analyser.getByteFrequencyData(dataArray);
+      let sum = 0;
+      for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+      const volumeLevel = (sum / dataArray.length) / 255;
+      
+      const rawAmp = volumeLevel > 0.01 ? volumeLevel * 15 : 0.5;
+      waveTargetAmp = Math.min(rawAmp, 5); // ponytail: cap amplitude so it doesn't blow out
+      
+      const rawSpeed = volumeLevel > 0.05 ? volumeLevel * 8 : 0.15;
+      waveTargetSpeed = Math.min(rawSpeed, 2);
+      
+      const rawScale = 1 + (volumeLevel * 0.2);
+      targetScale = Math.min(rawScale, 1.2); // ponytail: cap scale expansion
+    } else {
+      // Responding / Processing
+      const time = Date.now() / 300;
+      const simVol = 0.5 + Math.sin(time) * 0.3; // 0.2 to 0.8
+      waveTargetAmp = simVol * 4;
+      waveTargetSpeed = simVol * 3;
+      targetScale = 1 + (simVol * 0.1); // Orb pulses softer when responding
+    }
+    
+    currentScale += (targetScale - currentScale) * 0.1; // Smooth scale transitions
+    indicator.style.transform = `scale(${currentScale})`;
+    
+    siriWave.setAmplitude(siriWave.amplitude + (waveTargetAmp - siriWave.amplitude) * 0.1); // Smoother lerp
+    siriWave.setSpeed(siriWave.speed + (waveTargetSpeed - siriWave.speed) * 0.1);
+  }
+  requestAnimationFrame(waveLoop);
+};
+requestAnimationFrame(waveLoop);
+
 const geminiModelSelect = document.getElementById('gemini-model') as HTMLSelectElement;
 const geminiApiKeyInput = document.getElementById('gemini-api-key') as HTMLInputElement;
+const groqApiKeyInput = document.getElementById('groq-api-key') as HTMLInputElement;
 const visionToggle = document.getElementById('vision-toggle') as HTMLInputElement;
 const rateLimitToggle = document.getElementById('rate-limit-toggle') as HTMLInputElement;
 const rateLimitDurationInput = document.getElementById('rate-limit-duration') as HTMLInputElement;
@@ -68,6 +139,20 @@ settingsBtn.addEventListener('click', () => {
   }
 });
 
+document.getElementById('close-settings-btn')?.addEventListener('click', () => {
+  isSettingsVisible = false;
+  settingsView.classList.remove('active');
+  settingsBtn.style.color = 'var(--text-muted)';
+  chatLog.scrollTop = chatLog.scrollHeight;
+});
+
+document.getElementById('close-debug-btn')?.addEventListener('click', () => {
+  isDebugVisible = false;
+  debugLog.classList.remove('active');
+  debugBtn.style.color = 'var(--text-muted)';
+  chatLog.scrollTop = chatLog.scrollHeight;
+});
+
 window.addEventListener('agent-log', (e: any) => {
   const entry = e.detail;
   const div = document.createElement('div');
@@ -106,17 +191,19 @@ let rateLimitDurationMs = 0;
 
 async function loadSettings() {
   const data = await chrome.storage.local.get([
-    'geminiModel', 'geminiApiKey', 'visionEnabled', 'rateLimitEnabled', 'rateLimitDurationMs'
+    'geminiModel', 'geminiApiKey', 'groqApiKey', 'visionEnabled', 'rateLimitEnabled', 'rateLimitDurationMs'
   ]);
 
   geminiModel = (data.geminiModel as string) || 'gemini-3.1-flash-lite';
   geminiApiKey = (data.geminiApiKey as string) || '';
+  groqApiKey = (data.groqApiKey as string) || '';
   visionEnabled = data.visionEnabled !== false;
   rateLimitEnabled = data.rateLimitEnabled === true;
   rateLimitDurationMs = data.rateLimitDurationMs !== undefined ? (data.rateLimitDurationMs as number) : 0;
 
   geminiModelSelect.value = geminiModel;
   geminiApiKeyInput.value = geminiApiKey;
+  groqApiKeyInput.value = groqApiKey;
   visionToggle.checked = visionEnabled;
   rateLimitToggle.checked = rateLimitEnabled;
   rateLimitDurationInput.value = rateLimitDurationMs.toString();
@@ -132,12 +219,13 @@ await loadSettings();
 saveSettingsBtn.addEventListener('click', async () => {
   geminiModel = geminiModelSelect.value;
   geminiApiKey = geminiApiKeyInput.value;
+  groqApiKey = groqApiKeyInput.value;
   visionEnabled = visionToggle.checked;
   rateLimitEnabled = rateLimitToggle.checked;
   rateLimitDurationMs = parseInt(rateLimitDurationInput.value, 10) || 0;
 
   await chrome.storage.local.set({
-    geminiModel, geminiApiKey, visionEnabled, rateLimitEnabled, rateLimitDurationMs
+    geminiModel, geminiApiKey, groqApiKey, visionEnabled, rateLimitEnabled, rateLimitDurationMs
   });
 
   const bgCtx = { name: '', role: '', preferences: [], shortcuts: {}, frequentSites: [], location };
@@ -191,6 +279,8 @@ agent.onSpeak = (text: string) => {
   speakText(text).catch(console.error);
 };
 
+let isRefreshingTab = false;
+
 agent.onGetContext = async () => {
   const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
   const tabId = tabs[0]?.id;
@@ -204,8 +294,12 @@ agent.onGetContext = async () => {
     const url = tabs[0].url || '';
     if (err.message && err.message.includes('Receiving end does not exist')) {
       if (!url.startsWith('chrome://') && !url.startsWith('edge://') && !url.startsWith('about:')) {
-        agent.onSpeak?.('I lost connection to the page. I am refreshing it for you now.');
-        chrome.tabs.reload(tabId);
+        if (!isRefreshingTab) {
+          isRefreshingTab = true;
+          agent.onSpeak?.('I lost connection to the page. I am refreshing it for you now.');
+          chrome.tabs.reload(tabId);
+          setTimeout(() => isRefreshingTab = false, 8000);
+        }
       }
     }
     return { url, title: tabs[0].title || '', semanticText: '', markersText: '' };
@@ -320,12 +414,32 @@ async function toggleRecording() {
 
     let interimBubble: HTMLElement | null = null;
 
-    recognition.onstart = () => {
+    recognition.onstart = async () => {
       logger.info('STT', 'Speech recognition started');
       isRecording = true;
       interimBubble = null;
       indicator.dataset.state = 'listening';
       stateText.textContent = 'Listening...';
+      
+      try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        audioContext = new AudioContext();
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+        const source = audioContext.createMediaStreamSource(mediaStream);
+        source.connect(analyser);
+        
+        if (groqApiKey) {
+          mediaRecorder = new MediaRecorder(mediaStream, { mimeType: 'audio/webm' });
+          audioChunks = [];
+          mediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) audioChunks.push(e.data);
+          };
+          mediaRecorder.start();
+        }
+      } catch (err) {
+        console.error("Failed to start audio analyzer", err);
+      }
     };
 
     recognition.onresult = async (event: any) => {
@@ -358,12 +472,42 @@ async function toggleRecording() {
         
         logger.debug('STT', 'Speech recognition result received', { transcript: finalTranscript });
         if (!finalTranscript.trim()) return;
-        appendLog('User', finalTranscript);
         
         indicator.dataset.state = 'processing';
         stateText.textContent = 'Processing...';
-        
-        await agent.handleTranscript(finalTranscript);
+
+        if (groqApiKey && mediaRecorder && mediaRecorder.state === 'recording') {
+          mediaRecorder.onstop = async () => {
+            const blob = new Blob(audioChunks, { type: 'audio/webm' });
+            const formData = new FormData();
+            formData.append('file', blob, 'audio.webm');
+            formData.append('model', 'whisper-large-v3-turbo');
+            formData.append('language', 'en'); // ponytail: explicitly force English to prevent accent hallucination
+
+            try {
+              stateText.textContent = 'Transcribing...';
+              const res = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${groqApiKey}` },
+                body: formData
+              });
+              if (!res.ok) throw new Error(`Groq API Error: ${res.status}`);
+              const json = await res.json();
+              const groqText = json.text?.trim() || finalTranscript;
+              appendLog('User', groqText);
+              await agent.handleTranscript(groqText);
+            } catch (err) {
+              console.error('Groq fallback to Webkit:', err);
+              appendLog('User', finalTranscript);
+              await agent.handleTranscript(finalTranscript);
+            }
+          };
+          stopRecording(); // Triggers mediaRecorder.onstop
+        } else {
+          appendLog('User', finalTranscript);
+          stopRecording();
+          await agent.handleTranscript(finalTranscript);
+        }
       }
     };
 
@@ -406,6 +550,20 @@ function stopRecording() {
   }
   chrome.runtime.sendMessage({ type: 'UNMUTE_ALL_TABS' });
   isRecording = false;
+  
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    mediaRecorder.stop();
+  }
+
+  if (mediaStream) {
+    mediaStream.getTracks().forEach(t => t.stop());
+    mediaStream = null;
+  }
+  if (audioContext) {
+    audioContext.close();
+    audioContext = null;
+  }
+  indicator.style.transform = '';
   
   if (indicator.dataset.state === 'listening') {
     indicator.dataset.state = 'idle';
