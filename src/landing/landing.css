@@ -1002,34 +1002,13 @@ body::before {
   margin: -0.55em 0 -0.625em -0.3125em; /* Dynamic margins (-0.55em = exactly -35.2px at 4rem) so overlap is always mathematically perfect */
   position: relative;
   z-index: 2;
-  
-  /* Safari Bug Fix: Force GPU layer and bounding box so it doesn't get culled on scroll */
   display: inline-block;
-  transform: translateZ(0);
-  will-change: transform, filter;
   
-  /* Very Subtle Animated Gradient (Whitish Cyan & Rose Gold) */
-  background: linear-gradient(
-    -45deg, 
-    #ffffff 0%, 
-    #fdf4f6 25%, /* extremely faint rose */
-    #ffffff 50%, 
-    #f0fcff 75%, /* extremely faint cyan */
-    #ffffff 100%
-  );
-  background-size: 300% 300%;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: signature-shimmer 24s linear infinite;
+  /* Solid white text to permanently fix Safari/Firefox GPU culling bugs associated with background-clip: text */
+  color: #ffffff;
   
-  /* Mimic the old double text-shadow using chained drop-shadows to support the clipped gradient */
-  filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.6)) drop-shadow(0 4px 12px rgba(255, 255, 255, 0.2));
-}
-
-@keyframes signature-shimmer {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  /* Native text-shadow for the white glow */
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.6), 0 4px 12px rgba(255, 255, 255, 0.2);
 }
 
 .social-links {
