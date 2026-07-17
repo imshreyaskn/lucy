@@ -28,6 +28,13 @@
     "run_at": "document_idle"
   }],
   "commands": {
+    "_execute_side_panel": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+K",
+        "mac": "Command+Shift+K"
+      },
+      "description": "Open Lucy Sidepanel"
+    },
     "toggle-listening": {
       "suggested_key": { "default": "Ctrl+Space" },
       "description": "Push-to-talk: hold to speak"
