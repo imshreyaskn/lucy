@@ -30,8 +30,8 @@
   "commands": {
     "_execute_side_panel": {
       "suggested_key": {
-        "default": "Ctrl+Shift+K",
-        "mac": "Command+Shift+K"
+        "default": "Ctrl+Shift+Y",
+        "mac": "Command+Shift+Y"
       },
       "description": "Open Lucy Sidepanel"
     },
