@@ -943,6 +943,126 @@ body::before {
 /* Removed legacy column-stacking media query to allow horizontal panning on mobile */
 
 /* ==========================================================================
+   How to Use Section
+   ========================================================================== */
+
+.how-to-use-section {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 80px 40px 100px 40px; 
+  box-sizing: border-box;
+  position: relative;
+  z-index: 10;
+  gap: 80px;
+}
+
+.how-to-use-section .section-header h2 {
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 2.5rem;
+  background: none;
+  -webkit-text-fill-color: var(--text-color);
+}
+
+.steps-container {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  gap: 40px;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.step-card {
+  flex: 1;
+  min-width: 280px;
+  max-width: 350px;
+  padding: 40px 32px;
+  border-radius: 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  position: relative;
+  overflow: hidden;
+  
+  /* Glass pill style */
+  background: rgba(250, 250, 250, 0.18);
+  backdrop-filter: blur(12px) saturate(0.6);
+  -webkit-backdrop-filter: blur(12px) saturate(0.6);
+  box-shadow: 
+    -4px 12px 20px 0 rgba(51, 51, 51, 0.15),
+    inset 0px 0px 4px 2px rgba(245, 230, 235, 1),
+    0 0 30px rgba(250, 245, 240, 0.4);
+    
+  transition: transform 0.4s var(--ease-spring), box-shadow 0.4s ease;
+}
+
+.step-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 
+    -4px 16px 24px 0 rgba(51, 51, 51, 0.2),
+    inset 0px 0px 4px 2px rgba(245, 230, 235, 1),
+    0 0 40px rgba(227, 194, 200, 0.6);
+}
+
+/* Glass Reflections */
+.step-card::before,
+.step-card::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 2;
+  border-radius: inherit;
+}
+.step-card::before { background: linear-gradient(to left top, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0) 50%); }
+.step-card::after { background: linear-gradient(to bottom, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0) 100%); }
+
+.step-number {
+  font-family: 'Parisienne', cursive;
+  font-size: 3rem;
+  color: var(--accent-color);
+  opacity: 0.8;
+  line-height: 1;
+  margin-bottom: 16px;
+  position: relative;
+  z-index: 5;
+}
+
+.step-card h3 {
+  font-size: 1.4rem;
+  margin: 0 0 12px 0;
+  color: var(--text-color);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  position: relative;
+  z-index: 5;
+}
+
+.step-card p {
+  font-size: 0.95rem;
+  margin: 0;
+  color: var(--text-color);
+  opacity: 0.8;
+  line-height: 1.6;
+  font-weight: 500;
+  position: relative;
+  z-index: 5;
+}
+
+.step-card p strong {
+  color: var(--text-color);
+  font-weight: 700;
+  background: rgba(255,255,255,0.4);
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+/* ==========================================================================
    Footer
    ========================================================================== */
 
