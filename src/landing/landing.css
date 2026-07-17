@@ -988,7 +988,7 @@ body::before {
 
 .how-to-list li {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 24px;
 }
 
@@ -1000,14 +1000,12 @@ body::before {
   align-items: center;
   justify-content: center;
   color: var(--accent-color);
-  margin-top: 4px; /* Align with the first line of text */
 }
 
 .list-content {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding-top: 4px; /* visually align with the center of the bullet */
 }
 
 .list-content h3 {
