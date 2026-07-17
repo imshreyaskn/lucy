@@ -971,40 +971,9 @@ body::before {
 
 .how-to-list-container {
   width: 100%;
-  /* Large Glass Panel */
-  background: rgba(250, 250, 250, 0.18);
-  backdrop-filter: blur(12px) saturate(120%);
-  -webkit-backdrop-filter: blur(12px) saturate(120%);
-  box-shadow: 
-    -4px 12px 20px 0 rgba(51, 51, 51, 0.15),
-    inset 0px 0px 4px 2px rgba(245, 230, 235, 1),
-    0 0 30px rgba(250, 245, 240, 0.4);
-  border-radius: 32px;
-  padding: 48px 56px;
   position: relative;
-  overflow: hidden;
-  transition: box-shadow var(--transition-normal);
+  /* Removed bounding box padding and styling */
 }
-
-.how-to-list-container:hover {
-  box-shadow: 
-    -4px 16px 24px 0 rgba(51, 51, 51, 0.2),
-    inset 0px 0px 4px 2px rgba(245, 230, 235, 1),
-    0 0 40px rgba(227, 194, 200, 0.6);
-}
-
-/* Glass Reflections */
-.how-to-list-container::before,
-.how-to-list-container::after {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; width: 100%; height: 100%;
-  pointer-events: none;
-  z-index: 2;
-  border-radius: inherit;
-}
-.how-to-list-container::before { background: linear-gradient(to left top, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0) 50%); }
-.how-to-list-container::after { background: linear-gradient(to bottom, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0) 100%); }
 
 .how-to-list {
   list-style: none;
